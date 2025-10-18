@@ -1,0 +1,74 @@
+{% extends "site_management/_base.html" %}
+
+{% block title %}{% if is_edit %}Edit{% else %}Add{% endif %} WAF Template{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">{% if is_edit %}Edit WAF Template{% else %}Add New WAF Template{% endif %}</h1>
+    <p class="text-gray-600 dark:text-gray-400">{% if is_edit %}Update template configuration{% else %}Create a reusable WAF configuration template{% endif %}</p>
+</div>
+
+<div class="max-w-2xl">
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
+        <form method="POST" class="space-y-6">
+            {% csrf_token %}
+            
+            <!-- Name -->
+            <div>
+                <label for="name" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Template Name *</label>
+                <input type="text" id="name" name="name" value="{% if template %}{{ template.name }}{% endif %}" 
+                    class="bg-white border border-gray-300 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" 
+                    placeholder="Standard Protection" required>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Unique template name</p>
+            </div>
+            
+            <!-- Template Type -->
+            <div>
+                <label for="template_type" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Template Type *</label>
+                <select id="template_type" name="template_type" 
+                    class="bg-white border border-gray-300 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required>
+                    <option value="basic" {% if template and template.template_type == 'basic' or not template %}selected{% endif %}>Basic</option>
+                    <option value="advanced" {% if template and template.template_type == 'advanced' %}selected{% endif %}>Advanced</option>
+                </select>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Basic or advanced protection level</p>
+            </div>
+            
+            <!-- Description -->
+            <div>
+                <label for="description" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Description</label>
+                <textarea id="description" name="description" rows="4"
+                    class="bg-white border border-gray-300 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" 
+                    placeholder="Describe what this template is for...">{% if template %}{{ template.description }}{% endif %}</textarea>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Optional description of this template</p>
+            </div>
+            
+            <!-- Info Box -->
+            <div class="p-4 bg-blue-50 dark:bg-blue-900 dark:bg-opacity-20 border border-blue-200 dark:border-blue-500 rounded-lg">
+                <div class="flex items-start">
+                    <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                    </svg>
+                    <div class="text-sm text-blue-700 dark:text-blue-300">
+                        <p class="font-medium mb-1">About WAF Templates:</p>
+                        <p class="text-blue-600 dark:text-blue-200">Templates allow you to define reusable WAF configurations that can be applied to multiple sites. This helps maintain consistent security policies across your infrastructure.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Buttons -->
+            <div class="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <button type="submit" 
+                    class="text-white dark:text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-800 font-medium rounded-lg text-sm px-5 py-2.5">
+                    {% if is_edit %}Update Template{% else %}Add Template{% endif %}
+                </button>
+                <a href="{% url 'waf_templates_list' %}" 
+                    class="text-gray-700 dark:text-white border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-4 focus:outline-none focus:ring-gray-200 dark:focus:ring-gray-800 font-medium rounded-lg text-sm px-5 py-2.5">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+

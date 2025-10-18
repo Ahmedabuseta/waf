@@ -1,0 +1,71 @@
+{% extends "site_management/_base.html" %}
+
+{% block title %}{% if is_edit %}Edit{% else %}Add{% endif %} Load Balancer - {{ site.host }}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">{% if is_edit %}Edit{% else %}Configure{% endif %} Load Balancer</h1>
+    <p class="text-gray-600 dark:text-gray-400">{% if is_edit %}Update load balancer settings{% else %}Configure load balancing{% endif %} for {{ site.host }}</p>
+</div>
+
+<div class="max-w-2xl">
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
+        <form method="POST" class="space-y-6">
+            {% csrf_token %}
+            
+            <!-- Algorithm -->
+            <div>
+                <label for="algorithm" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Algorithm *</label>
+                <select id="algorithm" name="algorithm" 
+                    class="bg-white border border-gray-300 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required>
+                    <option value="round_robin" {% if load_balancer and load_balancer.algorithm == 'round_robin' or not load_balancer %}selected{% endif %}>Round Robin</option>
+                    <option value="least_connections" {% if load_balancer and load_balancer.algorithm == 'least_connections' %}selected{% endif %}>Least Connections</option>
+                    <option value="ip_hash" {% if load_balancer and load_balancer.algorithm == 'ip_hash' %}selected{% endif %}>IP Hash</option>
+                </select>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Load balancing algorithm</p>
+            </div>
+            
+            <!-- Health Check URL -->
+            <div>
+                <label for="health_check_url" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Health Check URL *</label>
+                <input type="url" id="health_check_url" name="health_check_url" 
+                    value="{% if load_balancer %}{{ load_balancer.health_check_url }}{% endif %}"
+                    class="bg-white border border-gray-300 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" 
+                    placeholder="https://example.com/health" required>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">URL to check backend server health</p>
+            </div>
+            
+            <!-- Info Box -->
+            <div class="p-4 bg-blue-50 dark:bg-blue-900 dark:bg-opacity-20 border border-blue-200 dark:border-blue-500 rounded-lg">
+                <div class="flex items-start">
+                    <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                    </svg>
+                    <div class="text-sm text-blue-300">
+                        <p class="font-medium mb-1">Load Balancing Algorithms:</p>
+                        <ul class="list-disc list-inside space-y-1 text-blue-200">
+                            <li><strong>Round Robin:</strong> Distributes requests evenly across all servers</li>
+                            <li><strong>Least Connections:</strong> Routes to server with fewest active connections</li>
+                            <li><strong>IP Hash:</strong> Routes based on client IP for session persistence</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Buttons -->
+            <div class="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <button type="submit" 
+                    class="text-white dark:text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-800 font-medium rounded-lg text-sm px-5 py-2.5">
+                    {% if is_edit %}Update{% else %}Configure{% endif %} Load Balancer
+                </button>
+                <a href="{% url 'site_detail' site.slug %}" 
+                    class="text-gray-700 dark:text-white border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-4 focus:outline-none focus:ring-gray-200 dark:focus:ring-gray-800 font-medium rounded-lg text-sm px-5 py-2.5">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+

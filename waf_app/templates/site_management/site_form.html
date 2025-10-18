@@ -1,0 +1,108 @@
+{% extends "site_management/_base.html" %}
+
+{% block title %}{% if is_edit %}Edit{% else %}Add{% endif %} Site - WAF Management{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">{% if is_edit %}Edit Site{% else %}Add New Site{% endif %}</h1>
+    <p class="text-gray-600 dark:text-gray-400">{% if is_edit %}Update site configuration{% else %}Configure a new protected site{% endif %}</p>
+    </div>
+
+<div class="max-w-3xl">
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
+        <form method="POST" class="space-y-6">
+            {% csrf_token %}
+            
+            <!-- Host -->
+            <div>
+                <label for="host" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Host *</label>
+                <input type="text" id="host" name="host" value="{% if site %}{{ site.host }}{% endif %}" 
+                    class="bg-white border border-gray-300 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" 
+                    placeholder="example.com or 192.168.1.100" required>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Domain name or IP address</p>
+            </div>
+            
+            <!-- Protocol -->
+            <div>
+                <label for="protocol" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Protocol *</label>
+                <select id="protocol" name="protocol" 
+                    class="bg-white border border-gray-300 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required>
+                    <option value="http" {% if site and site.protocol == 'http' %}selected{% endif %}>HTTP</option>
+                    <option value="https" {% if site and site.protocol == 'https' %}selected{% elif not site %}selected{% endif %}>HTTPS</option>
+                </select>
+            </div>
+            
+            <!-- Auto SSL -->
+            <div class="flex items-center">
+                <input id="auto_ssl" name="auto_ssl" type="checkbox" 
+                    class="w-4 h-4 text-blue-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+                    {% if site and site.auto_ssl or not site %}checked{% endif %}>
+                <label for="auto_ssl" class="ml-2 text-sm font-medium text-gray-900 dark:text-white">Enable Auto SSL</label>
+                <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">(Automatic SSL certificate management)</span>
+            </div>
+            
+            <!-- Status -->
+            <div>
+                <label for="status" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Status *</label>
+                <select id="status" name="status" 
+                    class="bg-white border border-gray-300 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required>
+                    <option value="active" {% if site and site.status == 'active' or not site %}selected{% endif %}>Active</option>
+                    <option value="inactive" {% if site and site.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                </select>
+            </div>
+            
+            <!-- Action Type -->
+            <div>
+                <label for="action_type" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Action Type *</label>
+                <select id="action_type" name="action_type" 
+                    class="bg-white border border-gray-300 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required>
+                    <option value="block" {% if site and site.action_type == 'block' %}selected{% endif %}>Block</option>
+                    <option value="log" {% if site and site.action_type == 'log' or not site %}selected{% endif %}>Log</option>
+                </select>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Block threats or just log them</p>
+            </div>
+            
+            <!-- Sensitivity Level -->
+            <div>
+                <label for="sensitivity_level" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Sensitivity Level *</label>
+                <select id="sensitivity_level" name="sensitivity_level" 
+                    class="bg-white border border-gray-300 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required>
+                    <option value="low" {% if site and site.sensitivity_level == 'low' %}selected{% endif %}>Low</option>
+                    <option value="medium" {% if site and site.sensitivity_level == 'medium' or not site %}selected{% endif %}>Medium</option>
+                    <option value="high" {% if site and site.sensitivity_level == 'high' %}selected{% endif %}>High</option>
+                </select>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Detection sensitivity for threats</p>
+            </div>
+            
+            <!-- WAF Template -->
+            <div>
+                <label for="waf_template" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">WAF Template</label>
+                <select id="waf_template" name="waf_template" 
+                    class="bg-white border border-gray-300 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                    <option value="">None</option>
+                    {% for template in waf_templates %}
+                    <option value="{{ template.id }}" {% if site and site.WafTemplate and site.WafTemplate.id == template.id %}selected{% endif %}>
+                        {{ template.name }} ({{ template.get_template_type_display }})
+                    </option>
+                    {% endfor %}
+                </select>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Optional: Apply a WAF template</p>
+            </div>
+            
+            <!-- Buttons -->
+            <div class="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <button type="submit" 
+                    class="text-white dark:text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-800 font-medium rounded-lg text-sm px-5 py-2.5">
+                    {% if is_edit %}Update Site{% else %}Add Site{% endif %}
+                </button>
+                <a href="{% if site %}{% url 'site_detail' site.slug %}{% else %}{% url 'sites_list' %}{% endif %}" 
+                    class="text-gray-700 dark:text-white border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-4 focus:outline-none focus:ring-gray-200 dark:focus:ring-gray-800 font-medium rounded-lg text-sm px-5 py-2.5">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+

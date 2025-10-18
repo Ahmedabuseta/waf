@@ -1,0 +1,36 @@
+2025-10-16 20:56:00 - INFO - ADD_SITE_START - SUCCESS
+Details: {
+  "domain": "ec2-16-171-255-15.eu-north-1.compute.amazonaws.com",
+  "addresses": [
+    {
+      "ip_address": "16.171.255.15",
+      "port": 80,
+      "is_allowed": true
+    }
+  ],
+  "protocol": "http",
+  "auto_ssl": false,
+  "support_subdomains": false
+}
+2025-10-16 20:56:00 - INFO - CONFIG_UPDATE - SUCCESS
+Config file saved: config_20251016_205600.caddy
+2025-10-16 20:56:00 - INFO - ADD_SITE_COMPLETE - SUCCESS
+Details: {
+  "domain": "ec2-16-171-255-15.eu-north-1.compute.amazonaws.com",
+  "addresses": [
+    {
+      "ip_address": "16.171.255.15",
+      "port": 80,
+      "is_allowed": true
+    }
+  ],
+  "protocol": "http",
+  "auto_ssl": false,
+  "support_subdomains": false,
+  "ssl_strategy": {
+    "type": "none",
+    "reason": "HTTP protocol"
+  },
+  "reload_success": true,
+  "duration": 0.06998801231384277
+}

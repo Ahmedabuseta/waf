@@ -1,0 +1,274 @@
+{% extends "site_management/_base.html" %}
+
+{% block title %}SSL Status - {{ site.host }}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <div class="flex justify-between items-start">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">SSL/TLS Certificate Status</h1>
+            <p class="text-gray-600 dark:text-gray-400">Certificate information and validation for {{ site.host }}</p>
+        </div>
+        <div class="flex gap-2">
+            <a href="{% url 'ssl_upload' site.slug %}" class="text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-800 font-medium rounded-lg text-sm px-5 py-2.5">
+                Manage SSL
+            </a>
+            <a href="{% url 'site_detail' site.slug %}" class="text-gray-400 hover:text-white border border-gray-600 hover:bg-gray-700 focus:ring-4 focus:outline-none focus:ring-gray-800 font-medium rounded-lg text-sm px-5 py-2.5">
+                Back to Site
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- SSL Overview Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+    <!-- SSL Mode Card -->
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">SSL Mode</h3>
+            <svg class="w-8 h-8 {% if site.auto_ssl %}text-green-500{% else %}text-blue-500{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+            </svg>
+        </div>
+        <p class="text-2xl font-bold text-gray-900 dark:text-white">
+            {% if site.auto_ssl %}Auto SSL{% else %}Manual{% endif %}
+        </p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+            {% if site.auto_ssl %}Let's Encrypt automatic{% else %}Custom certificates{% endif %}
+        </p>
+    </div>
+
+    <!-- Protocol Card -->
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">Protocol</h3>
+            <svg class="w-8 h-8 {% if site.protocol == 'https' %}text-green-500{% else %}text-gray-500{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+            </svg>
+        </div>
+        <p class="text-2xl font-bold text-gray-900 dark:text-white">
+            {{ site.protocol|upper }}
+        </p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+            {% if site.protocol == 'https' %}Encrypted{% else %}Not encrypted{% endif %}
+        </p>
+    </div>
+
+    <!-- Wildcard Support Card -->
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">Wildcard</h3>
+            <svg class="w-8 h-8 {% if site.support_subdomains %}text-purple-500{% else %}text-gray-500{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path>
+            </svg>
+        </div>
+        <p class="text-2xl font-bold text-gray-900 dark:text-white">
+            {% if site.support_subdomains %}Enabled{% else %}Disabled{% endif %}
+        </p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+            {% if site.support_subdomains %}*.{{ site.host }}{% else %}Single domain{% endif %}
+        </p>
+    </div>
+</div>
+
+<!-- Certificate Information -->
+{% if ssl_info %}
+<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm mb-6">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            Certificate Information
+        </h2>
+        {% if ssl_info.valid %}
+        <span class="px-3 py-1 rounded-full text-xs font-bold bg-green-900 text-green-300">VALID</span>
+        {% else %}
+        <span class="px-3 py-1 rounded-full text-xs font-bold bg-red-900 text-red-300">INVALID</span>
+        {% endif %}
+    </div>
+
+    {% if ssl_info.valid %}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="space-y-4">
+            {% if ssl_info.details.common_name %}
+            <div class="flex justify-between items-start p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <span class="text-gray-600 dark:text-gray-400 text-sm font-medium">Common Name</span>
+                <span class="text-gray-900 dark:text-white text-sm font-mono">{{ ssl_info.details.common_name }}</span>
+            </div>
+            {% endif %}
+
+            {% if ssl_info.details.organization %}
+            <div class="flex justify-between items-start p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <span class="text-gray-600 dark:text-gray-400 text-sm font-medium">Organization</span>
+                <span class="text-gray-900 dark:text-white text-sm">{{ ssl_info.details.organization }}</span>
+            </div>
+            {% endif %}
+
+            {% if ssl_info.details.issuer %}
+            <div class="flex justify-between items-start p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <span class="text-gray-600 dark:text-gray-400 text-sm font-medium">Issuer</span>
+                <span class="text-gray-900 dark:text-white text-sm">{{ ssl_info.details.issuer|truncatewords:8 }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="space-y-4">
+            {% if ssl_info.details.valid_from %}
+            <div class="flex justify-between items-start p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <span class="text-gray-600 dark:text-gray-400 text-sm font-medium">Valid From</span>
+                <span class="text-gray-900 dark:text-white text-sm">{{ ssl_info.details.valid_from }}</span>
+            </div>
+            {% endif %}
+
+            {% if ssl_info.details.expiry %}
+            <div class="flex justify-between items-start p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <span class="text-gray-600 dark:text-gray-400 text-sm font-medium">Expires</span>
+                <span class="text-gray-900 dark:text-white text-sm font-semibold">{{ ssl_info.details.expiry }}</span>
+            </div>
+            {% endif %}
+
+            {% if ssl_info.details.san %}
+            <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <span class="text-gray-600 dark:text-gray-400 text-sm font-medium block mb-2">Subject Alternative Names</span>
+                <div class="flex flex-wrap gap-1">
+                    {% for san in ssl_info.details.san %}
+                    <span class="px-2 py-1 bg-blue-900 text-blue-300 text-xs rounded">{{ san }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="p-4 bg-red-900 bg-opacity-20 border border-red-500 rounded-lg">
+        <div class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+            </svg>
+            <div class="flex-1">
+                <p class="text-red-300 text-sm font-medium">Certificate Validation Failed</p>
+                {% if ssl_info.errors %}
+                <ul class="text-red-400 text-xs mt-2 space-y-1">
+                    {% for error in ssl_info.errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Validation Status -->
+{% if validation_status %}
+<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm mb-6">
+    <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        Validation Status
+    </h2>
+
+    <div class="space-y-3">
+        {% for check, status in validation_status.items %}
+        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <div class="flex items-center gap-3">
+                {% if status %}
+                <svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                </svg>
+                {% else %}
+                <svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                </svg>
+                {% endif %}
+                <span class="text-gray-900 dark:text-white font-medium">{{ check|title }}</span>
+            </div>
+            <span class="px-2 py-1 rounded text-xs font-medium {% if status %}bg-green-900 text-green-300{% else %}bg-red-900 text-red-300{% endif %}">
+                {% if status %}PASSED{% else %}FAILED{% endif %}
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Quick Actions -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <form method="POST" action="{% url 'toggle_auto_ssl' site.slug %}">
+        {% csrf_token %}
+        <button type="submit" class="w-full h-full p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            <div class="flex flex-col items-center gap-2">
+                <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                <span class="text-gray-900 dark:text-white font-semibold text-sm">Toggle Auto SSL</span>
+                <span class="text-gray-600 dark:text-gray-400 text-xs">Currently: {% if site.auto_ssl %}ON{% else %}OFF{% endif %}</span>
+            </div>
+        </button>
+    </form>
+
+    {% if site.protocol == 'https' %}
+    <a href="{% url 'dns_challenge' site.slug %}" class="block p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+        <div class="flex flex-col items-center gap-2">
+            <svg class="w-8 h-8 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path>
+            </svg>
+            <span class="text-gray-900 dark:text-white font-semibold text-sm">DNS Challenge</span>
+            <span class="text-gray-600 dark:text-gray-400 text-xs">Configure DNS validation</span>
+        </div>
+    </a>
+    {% endif %}
+
+    <a href="{% url 'ssl_upload' site.slug %}" class="block p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+        <div class="flex flex-col items-center gap-2">
+            <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+            </svg>
+            <span class="text-gray-900 dark:text-white font-semibold text-sm">Upload Certificate</span>
+            <span class="text-gray-600 dark:text-gray-400 text-xs">Manual SSL upload</span>
+        </div>
+    </a>
+
+    <a href="{% url 'sync_site_to_caddy' site.slug %}" class="block p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+        <div class="flex flex-col items-center gap-2">
+            <svg class="w-8 h-8 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+            </svg>
+            <span class="text-gray-900 dark:text-white font-semibold text-sm">Sync to Caddy</span>
+            <span class="text-gray-600 dark:text-gray-400 text-xs">Deploy configuration</span>
+        </div>
+    </a>
+</div>
+
+<!-- Help Section -->
+{% if site.protocol == 'http' %}
+<div class="mt-6 p-4 bg-yellow-900 bg-opacity-20 border border-yellow-500 rounded-lg">
+    <div class="flex items-start gap-3">
+        <svg class="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+        </svg>
+        <div>
+            <p class="text-yellow-200 text-sm font-medium">SSL Not Configured</p>
+            <p class="text-yellow-300 text-xs mt-1">This site is currently using HTTP. Enable HTTPS in the site settings to configure SSL certificates.</p>
+        </div>
+    </div>
+</div>
+{% elif site.auto_ssl %}
+<div class="mt-6 p-4 bg-blue-900 bg-opacity-20 border border-blue-500 rounded-lg">
+    <div class="flex items-start gap-3">
+        <svg class="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+        </svg>
+        <div>
+            <p class="text-blue-200 text-sm font-medium">Auto SSL Enabled</p>
+            <p class="text-blue-300 text-xs mt-1">Caddy will automatically obtain and renew SSL certificates from Let's Encrypt. Ensure your domain's DNS is properly configured and points to this server.</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,44 @@
+[
+  {
+    "timestamp": "2025-10-16T20:56:00.516915",
+    "operation": "add_site_start",
+    "success": true,
+    "details": {
+      "domain": "test.lock",
+      "addresses": [
+        {
+          "ip_address": "127.0.0.1",
+          "port": 3000,
+          "is_allowed": true
+        }
+      ],
+      "protocol": "http",
+      "auto_ssl": false,
+      "support_subdomains": false
+    }
+  },
+  {
+    "timestamp": "2025-10-16T20:56:00.586704",
+    "operation": "add_site_complete",
+    "success": true,
+    "details": {
+      "domain": "test.lock",
+      "addresses": [
+        {
+          "ip_address": "127.0.0.1",
+          "port": 3000,
+          "is_allowed": true
+        }
+      ],
+      "protocol": "http",
+      "auto_ssl": false,
+      "support_subdomains": false,
+      "ssl_strategy": {
+        "type": "none",
+        "reason": "HTTP protocol"
+      },
+      "reload_success": true,
+      "duration": 0.06993412971496582
+    }
+  }
+]

@@ -1,0 +1,28 @@
+# Configuration for test.co
+# Generated: 2025-10-16T20:56:00.590883
+# Protocol: http, Auto SSL: False, Subdomains: False
+
+test.co {
+
+    # Request size limit
+    request_body {
+        max_size 10MB
+    }
+
+    # Single upstream
+    reverse_proxy 127.0.0.1:3000 {
+
+        # Health checks
+        health_uri /health
+        health_interval 30s
+        health_timeout 5s
+
+        # Header pass-through
+        header_up Host {upstream_hostport}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # HTTP protocol - no TLS
+}

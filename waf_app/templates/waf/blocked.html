@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access Blocked - WAF Security</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <script>
+        // Initialize theme
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 flex items-center justify-center min-h-screen text-gray-900 dark:text-white">
+    <div class="max-w-2xl mx-auto p-8">
+        <div class="bg-white dark:bg-gray-800 border-2 border-red-500 rounded-lg p-8 text-center">
+            <!-- Warning Icon -->
+            <div class="mb-6">
+                <svg class="mx-auto h-24 w-24 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+            </div>
+            
+            <!-- Main Message -->
+            <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">Access Blocked</h1>
+            <p class="text-xl text-red-600 dark:text-red-400 mb-6">Your request has been blocked by our Web Application Firewall</p>
+            
+            <!-- Threat Information -->
+            <div class="bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-6 mb-6 text-left">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Security Alert Details</h2>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-700 dark:text-gray-400">Threat Type:</span>
+                        <span class="text-gray-900 dark:text-white font-medium">{{ threat_type }}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-700 dark:text-gray-400">Threat Level:</span>
+                        <span class="px-3 py-1 rounded text-sm font-medium 
+                            {% if threat_level == 'critical' %}bg-red-900 text-red-300
+                            {% elif threat_level == 'high' %}bg-orange-900 text-orange-300
+                            {% elif threat_level == 'medium' %}bg-yellow-900 text-yellow-300
+                            {% else %}bg-blue-900 text-blue-300{% endif %}">
+                            {{ threat_level|upper }}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-700 dark:text-gray-400">Rule Matched:</span>
+                        <span class="text-gray-900 dark:text-white font-medium">{{ rule_name }}</span>
+                    </div>
+                    {% if details %}
+                    <div class="pt-3 border-t border-gray-700">
+                        <span class="text-gray-700 dark:text-gray-400 block mb-2">Details:</span>
+                        <code class="text-red-600 dark:text-red-400 text-sm">{{ details }}</code>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Information Box -->
+            <div class="bg-blue-50 dark:bg-blue-900 dark:bg-opacity-20 bg-opacity-60 border border-blue-200 dark:border-blue-500 rounded-lg p-4 mb-6">
+                <div class="flex items-start">
+                    <svg class="w-6 h-6 text-blue-600 dark:text-blue-400 mr-3 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                    </svg>
+                    <div class="text-left">
+                        <p class="text-blue-700 dark:text-blue-300 text-sm">
+                            <strong>Why was I blocked?</strong><br>
+                            Our WAF detected potentially malicious patterns in your request. This is an automated security measure to protect {{ site.host }} from attacks.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="space-y-3">
+                <p class="text-gray-700 dark:text-gray-400 text-sm mb-4">If you believe this is a mistake, please:</p>
+                <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                    <button onclick="window.history.back()" class="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition">
+                        Go Back
+                    </button>
+                    <a href="/" class="px-6 py-3 bg-blue-600 text-white dark:text-white rounded-lg hover:bg-blue-700 transition inline-block">
+                        Return to Homepage
+                    </a>
+                </div>
+                <p class="text-gray-600 dark:text-gray-500 text-xs mt-6">
+                    Incident ID: {{ request.META.HTTP_X_REQUEST_ID|default:"N/A" }} | 
+                    Timestamp: {% now "Y-m-d H:i:s" %}
+                </p>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="text-center mt-6">
+            <p class="text-gray-600 dark:text-gray-500 text-sm">
+                Protected by WAF Security System
+            </p>
+        </div>
+    </div>
+
+    <!-- Floating Theme Toggle -->
+    <button id="theme-toggle" type="button" class="fixed bottom-4 right-4 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-3 shadow-lg bg-white dark:bg-gray-800">
+        <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+        </svg>
+        <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414z" fill-rule="evenodd" clip-rule="evenodd"></path>
+        </svg>
+    </button>
+
+    <script>
+        var themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+        var themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            themeToggleLightIcon.classList.remove('hidden');
+        } else {
+            themeToggleDarkIcon.classList.remove('hidden');
+        }
+        var themeToggleBtn = document.getElementById('theme-toggle');
+        themeToggleBtn.addEventListener('click', function() {
+            themeToggleDarkIcon.classList.toggle('hidden');
+            themeToggleLightIcon.classList.toggle('hidden');
+            if (localStorage.getItem('color-theme')) {
+                if (localStorage.getItem('color-theme') === 'light') {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('color-theme', 'dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('color-theme', 'light');
+                }
+            } else {
+                if (document.documentElement.classList.contains('dark')) {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('color-theme', 'light');
+                } else {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('color-theme', 'dark');
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+
+

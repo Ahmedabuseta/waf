@@ -1,0 +1,117 @@
+{% extends "site_management/_base.html" %}
+
+{% block title %}Log #{{ log.id }} - WAF Management{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <div class="flex justify-between items-start">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Log Details #{{ log.id }}</h1>
+            <p class="text-gray-600 dark:text-gray-400">Security log entry information</p>
+        </div>
+        <a href="{% url 'logs_list' %}" 
+            class="text-gray-700 dark:text-white border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-4 focus:outline-none focus:ring-gray-200 dark:focus:ring-gray-800 font-medium rounded-lg text-sm px-5 py-2.5">
+            Back to Logs
+        </a>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main Info -->
+    <div class="lg:col-span-2 space-y-6">
+        <!-- Request Information -->
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Request Information</h2>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-sm text-gray-600 dark:text-gray-400">Site</label>
+                    <p class="text-gray-900 dark:text-white font-medium">
+                        <a href="{% url 'site_detail' log.site.slug %}" class="text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300">
+                            {{ log.site.host }}
+                        </a>
+                    </p>
+                </div>
+                <div>
+                    <label class="text-sm text-gray-600 dark:text-gray-400">IP Address</label>
+                    <p class="text-gray-900 dark:text-white font-mono text-lg">{{ log.ip_address }}</p>
+                </div>
+                <div>
+                    <label class="text-sm text-gray-600 dark:text-gray-400">Request Method</label>
+                    <p class="text-gray-900 dark:text-white">
+                        <span class="px-3 py-1 text-sm font-medium rounded bg-blue-900 text-blue-300">
+                            {{ log.request_method }}
+                        </span>
+                    </p>
+                </div>
+                <div>
+                    <label class="text-sm text-gray-600 dark:text-gray-400">Request URL</label>
+                    <p class="text-gray-900 dark:text-white font-medium break-all">{{ log.request_url }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Security Action -->
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Security Action</h2>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-sm text-gray-600 dark:text-gray-400">Action Taken</label>
+                    <p class="text-gray-900 dark:text-white">
+                        <span class="px-3 py-1 text-sm font-medium rounded {% if log.action_taken == 'blocked' %}bg-red-900 text-red-300{% else %}bg-green-900 text-green-300{% endif %}">
+                            {{ log.get_action_taken_display }}
+                        </span>
+                    </p>
+                </div>
+                {% if log.details %}
+                <div>
+                    <label class="text-sm text-gray-600 dark:text-gray-400">Details</label>
+                    <div class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-600 rounded p-3 mt-1">
+                        <pre class="text-gray-900 dark:text-white text-sm whitespace-pre-wrap">{{ log.details }}</pre>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="space-y-6">
+        <!-- Timestamp -->
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Timestamp</h2>
+            <div class="space-y-2">
+                <div>
+                    <label class="text-sm text-gray-600 dark:text-gray-400">Date & Time</label>
+                    <p class="text-gray-900 dark:text-white font-medium">{{ log.timestamp|date:"F d, Y" }}</p>
+                    <p class="text-gray-900 dark:text-white font-medium">{{ log.timestamp|date:"H:i:s" }}</p>
+                </div>
+                <div>
+                    <label class="text-sm text-gray-600 dark:text-gray-400">Time Ago</label>
+                    <p class="text-gray-900 dark:text-white font-medium">{{ log.timestamp|timesince }} ago</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h2>
+            <div class="space-y-2">
+                <a href="{% url 'logs_list' %}?site={{ log.site.slug }}" 
+                    class="block w-full text-center text-white dark:text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-800 font-medium rounded-lg text-sm px-4 py-2">
+                    View Site Logs
+                </a>
+                <a href="{% url 'logs_list' %}?ip={{ log.ip_address }}" 
+                    class="block w-full text-center text-white dark:text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-800 font-medium rounded-lg text-sm px-4 py-2">
+                    View IP Logs
+                </a>
+                <a href="{% url 'site_detail' log.site.slug %}" 
+                    class="block w-full text-center text-gray-700 dark:text-white border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-4 focus:outline-none focus:ring-gray-200 dark:focus:ring-gray-800 font-medium rounded-lg text-sm px-4 py-2">
+                    View Site Details
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

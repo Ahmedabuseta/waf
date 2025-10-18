@@ -1,0 +1,138 @@
+{% extends "site_management/_base.html" %}
+
+{% block title %}SSL Certificate Upload - {{ site.host }}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <div class="flex justify-between items-start">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">SSL Certificate Management</h1>
+            <p class="text-gray-600 dark:text-gray-400">Upload and manage SSL certificates for {{ site.host }}</p>
+        </div>
+        <a href="{% url 'site_detail' site.slug %}" class="text-gray-700 dark:text-white border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-4 focus:outline-none focus:ring-gray-200 dark:focus:ring-gray-800 font-medium rounded-lg text-sm px-5 py-2.5">
+            Back to Site
+        </a>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Current SSL Status -->
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Current SSL Status</h2>
+        
+        <div class="space-y-3">
+            <div class="flex justify-between items-center">
+                <span class="text-gray-600 dark:text-gray-400">SSL Mode:</span>
+                <span class="px-3 py-1 rounded text-sm font-medium {% if site.auto_ssl %}bg-green-900 text-green-300{% else %}bg-blue-900 text-blue-300{% endif %}">
+                    {% if site.auto_ssl %}Auto SSL (Let's Encrypt){% else %}Manual SSL{% endif %}
+                </span>
+            </div>
+            
+            {% if ssl_info %}
+            <div class="pt-3 border-t border-gray-200 dark:border-gray-700">
+                <h3 class="text-gray-900 dark:text-white font-medium mb-2">Certificate Information</h3>
+                {% if ssl_info.valid %}
+                <div class="space-y-2 text-sm">
+                    {% if ssl_info.details.common_name %}
+                    <div class="flex justify-between">
+                        <span class="text-gray-600 dark:text-gray-400">Common Name:</span>
+                        <span class="text-gray-900 dark:text-white">{{ ssl_info.details.common_name }}</span>
+                    </div>
+                    {% endif %}
+                    {% if ssl_info.details.issuer %}
+                    <div class="flex justify-between">
+                        <span class="text-gray-600 dark:text-gray-400">Issuer:</span>
+                        <span class="text-gray-900 dark:text-white text-xs">{{ ssl_info.details.issuer|truncatewords:5 }}</span>
+                    </div>
+                    {% endif %}
+                    {% if ssl_info.details.expiry %}
+                    <div class="flex justify-between">
+                        <span class="text-gray-600 dark:text-gray-400">Expires:</span>
+                        <span class="text-gray-900 dark:text-white">{{ ssl_info.details.expiry }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <p class="text-red-600 dark:text-red-400 text-sm">{{ ssl_info.message }}</p>
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="text-center py-6">
+                <svg class="mx-auto h-12 w-12 text-gray-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                </svg>
+                <p class="text-gray-400">No SSL certificate uploaded</p>
+            </div>
+            {% endif %}
+            
+            <form method="POST" action="{% url 'toggle_auto_ssl' site.slug %}" class="pt-3 border-t border-gray-200 dark:border-gray-700">
+                {% csrf_token %}
+                <button type="submit" class="w-full text-white dark:text-white {% if site.auto_ssl %}bg-red-600 hover:bg-red-700{% else %}bg-green-600 hover:bg-green-700{% endif %} focus:ring-4 focus:outline-none font-medium rounded-lg text-sm px-5 py-2.5">
+                    {% if site.auto_ssl %}Disable Auto SSL{% else %}Enable Auto SSL{% endif %}
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Upload Form -->
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Upload SSL Certificate</h2>
+        
+        {% if site.auto_ssl %}
+        <div class="p-4 mb-4 bg-yellow-50 dark:bg-yellow-900 dark:bg-opacity-20 border border-yellow-200 dark:border-yellow-500 rounded-lg">
+            <p class="text-yellow-700 dark:text-yellow-300 text-sm">
+                Auto SSL is currently enabled. Disable it to upload custom certificates.
+            </p>
+        </div>
+        {% endif %}
+        
+        <form method="POST" enctype="multipart/form-data" class="space-y-4" {% if site.auto_ssl %}style="pointer-events:none;opacity:0.5"{% endif %}>
+            {% csrf_token %}
+            
+            <!-- Certificate File -->
+            <div>
+                <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">SSL Certificate *</label>
+                <input type="file" name="ssl_certificate" accept=".pem,.crt,.cer" required
+                    class="block w-full text-sm text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer bg-white dark:bg-gray-700 focus:outline-none">
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">PEM, CRT, or CER format</p>
+            </div>
+            
+            <!-- Private Key -->
+            <div>
+                <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Private Key *</label>
+                <input type="file" name="ssl_key" accept=".pem,.key" required
+                    class="block w-full text-sm text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer bg-white dark:bg-gray-700 focus:outline-none">
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">PEM or KEY format</p>
+            </div>
+            
+            <!-- Certificate Chain (Optional) -->
+            <div>
+                <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Certificate Chain (Optional)</label>
+                <input type="file" name="ssl_chain" accept=".pem,.crt,.cer"
+                    class="block w-full text-sm text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer bg-white dark:bg-gray-700 focus:outline-none">
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Intermediate certificates</p>
+            </div>
+            
+            <!-- Info Box -->
+            <div class="p-4 bg-blue-50 dark:bg-blue-900 dark:bg-opacity-20 border border-blue-200 dark:border-blue-500 rounded-lg">
+                <div class="flex items-start">
+                    <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                    </svg>
+                    <div class="text-sm text-blue-700 dark:text-blue-300">
+                        <p class="font-medium mb-1">Certificate Validation</p>
+                        <p class="text-blue-600 dark:text-blue-200">Files will be automatically validated to ensure the certificate and private key match before uploading.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit" {% if site.auto_ssl %}disabled{% endif %}
+                class="w-full text-white dark:text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-800 font-medium rounded-lg text-sm px-5 py-2.5 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                Upload and Validate
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+

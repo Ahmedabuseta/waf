@@ -1,0 +1,28 @@
+# Configuration for ec2-16-171-255-15.eu-north-1.compute.amazonaws.com
+# Generated: 2025-10-16T20:56:00.663134
+# Protocol: http, Auto SSL: False, Subdomains: False
+
+ec2-16-171-255-15.eu-north-1.compute.amazonaws.com {
+
+    # Request size limit
+    request_body {
+        max_size 10MB
+    }
+
+    # Single upstream
+    reverse_proxy 16.171.255.15:80 {
+
+        # Health checks
+        health_uri /health
+        health_interval 30s
+        health_timeout 5s
+
+        # Header pass-through
+        header_up Host {upstream_hostport}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # HTTP protocol - no TLS
+}

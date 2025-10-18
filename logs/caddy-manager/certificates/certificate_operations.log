@@ -1,0 +1,6 @@
+2025-10-16 20:56:00 - INFO - [test.lockdd] AUTO_SSL_SELECTED - SUCCESS
+Certificate Info: {
+  "type": "auto_single",
+  "reason": "no valid certificates found, using Let's Encrypt",
+  "requires_dns_challenge": false
+}

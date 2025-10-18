@@ -1,0 +1,772 @@
+{% extends "site_management/_base.html" %} {% block title %}Caddy Configuration
+- {{ site.host }}{% endblock %} {% block content %}
+<div class="mb-6">
+    <div class="flex justify-between items-start">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                Caddy Configuration Preview
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400">
+                Generated configuration for {{ site.host }}
+            </p>
+        </div>
+        <div class="flex gap-2">
+            <button
+                onclick="copyConfig()"
+                class="text-white bg-purple-600 hover:bg-purple-700 focus:ring-4 focus:outline-none focus:ring-purple-800 font-medium rounded-lg text-sm px-5 py-2.5 flex items-center gap-2"
+            >
+                <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                    ></path>
+                </svg>
+                Copy Config
+            </button>
+            <form
+                method="POST"
+                action="{% url 'sync_site_to_caddy' site.slug %}"
+                class="inline"
+            >
+                {% csrf_token %}
+                <button
+                    type="submit"
+                    class="text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:outline-none focus:ring-green-800 font-medium rounded-lg text-sm px-5 py-2.5 flex items-center gap-2"
+                >
+                    <svg
+                        class="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                        ></path>
+                    </svg>
+                    Apply to Caddy
+                </button>
+            </form>
+            <a
+                href="{% url 'site_detail' site.slug %}"
+                class="text-gray-400 hover:text-white border border-gray-600 hover:bg-gray-700 focus:ring-4 focus:outline-none focus:ring-gray-800 font-medium rounded-lg text-sm px-5 py-2.5"
+            >
+                Back to Site
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Configuration Overview Cards -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm"
+    >
+        <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Host
+            </h3>
+            <svg
+                class="w-6 h-6 text-blue-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+            >
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+                ></path>
+            </svg>
+        </div>
+        <p
+            class="text-lg font-bold text-gray-900 dark:text-white truncate"
+            title="{{ site.host }}"
+        >
+            {{ site.host }}
+        </p>
+    </div>
+
+    <div
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm"
+    >
+        <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Protocol
+            </h3>
+            <svg
+                class="w-6 h-6 {% if site.protocol == 'https' %}text-green-500{% else %}text-gray-500{% endif %}"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+            >
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                ></path>
+            </svg>
+        </div>
+        <p class="text-lg font-bold text-gray-900 dark:text-white">
+            {{ site.protocol|upper }}
+        </p>
+    </div>
+
+    <div
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm"
+    >
+        <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Auto SSL
+            </h3>
+            <svg
+                class="w-6 h-6 {% if site.auto_ssl %}text-green-500{% else %}text-gray-500{% endif %}"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+            >
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                ></path>
+            </svg>
+        </div>
+        <p class="text-lg font-bold text-gray-900 dark:text-white">
+            {% if site.auto_ssl %}Enabled{% else %}Disabled{% endif %}
+        </p>
+    </div>
+
+    <div
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm"
+    >
+        <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Validation
+            </h3>
+            {% if validation_result %}
+            <svg
+                class="w-6 h-6 {% if validation_result.valid %}text-green-500{% else %}text-red-500{% endif %}"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+            >
+                {% if validation_result.valid %}
+                <path
+                    fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clip-rule="evenodd"
+                ></path>
+                {% else %}
+                <path
+                    fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clip-rule="evenodd"
+                ></path>
+                {% endif %}
+            </svg>
+            {% else %}
+            <svg
+                class="w-6 h-6 text-gray-500"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+            >
+                <path
+                    fill-rule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                    clip-rule="evenodd"
+                ></path>
+            </svg>
+            {% endif %}
+        </div>
+        <p class="text-lg font-bold text-gray-900 dark:text-white">
+            {% if validation_result %} {% if validation_result.valid %}Valid{%
+            else %}Invalid{% endif %} {% else %} N/A {% endif %}
+        </p>
+    </div>
+</div>
+
+<!-- Validation Errors -->
+{% if validation_result and not validation_result.valid %}
+<div class="mb-6 bg-red-900 bg-opacity-20 border border-red-500 rounded-lg p-4">
+    <div class="flex items-start gap-3">
+        <svg
+            class="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+        >
+            <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clip-rule="evenodd"
+            ></path>
+        </svg>
+        <div class="flex-1">
+            <h3 class="text-red-300 font-semibold mb-2">
+                Configuration Validation Errors
+            </h3>
+            <ul class="text-red-400 text-sm space-y-1 list-disc list-inside">
+                {% for error in validation_result.errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Configuration Tabs -->
+<div
+    class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm overflow-hidden"
+>
+    <!-- Tab Navigation -->
+    <div class="border-b border-gray-200 dark:border-gray-700">
+        <nav class="flex -mb-px" aria-label="Tabs">
+            <button
+                onclick="showTab('json')"
+                id="tab-json"
+                class="tab-button active px-6 py-4 text-sm font-medium border-b-2 border-blue-500 text-blue-600 dark:text-blue-400"
+            >
+                <div class="flex items-center gap-2">
+                    <svg
+                        class="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                        ></path>
+                    </svg>
+                    JSON Configuration
+                </div>
+            </button>
+            <button
+                onclick="showTab('caddyfile')"
+                id="tab-caddyfile"
+                class="tab-button px-6 py-4 text-sm font-medium border-b-2 border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-600"
+            >
+                <div class="flex items-center gap-2">
+                    <svg
+                        class="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        ></path>
+                    </svg>
+                    Caddyfile Format
+                </div>
+            </button>
+            <button
+                onclick="showTab('info')"
+                id="tab-info"
+                class="tab-button px-6 py-4 text-sm font-medium border-b-2 border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-600"
+            >
+                <div class="flex items-center gap-2">
+                    <svg
+                        class="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        ></path>
+                    </svg>
+                    Configuration Info
+                </div>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="p-6">
+        <!-- JSON Tab -->
+        <div id="content-json" class="tab-content">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                    JSON API Configuration
+                </h2>
+                <div class="flex gap-2">
+                    <button
+                        onclick="downloadConfig('json')"
+                        class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 flex items-center gap-1"
+                    >
+                        <svg
+                            class="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            ></path>
+                        </svg>
+                        Download
+                    </button>
+                    <button
+                        onclick="copyConfig()"
+                        class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 flex items-center gap-1"
+                    >
+                        <svg
+                            class="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                            ></path>
+                        </svg>
+                        Copy
+                    </button>
+                </div>
+            </div>
+            <pre
+                id="configContent"
+                class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-green-400 text-sm overflow-x-auto max-h-96 font-mono"
+            ><code>{{ config_text|default:"No configuration generated" }}</code></pre>
+        </div>
+
+        <!-- Caddyfile Tab -->
+        <div id="content-caddyfile" class="tab-content hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                    Caddyfile Format
+                </h2>
+                <div class="flex gap-2">
+                    <button
+                        onclick="downloadConfig('caddyfile')"
+                        class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 flex items-center gap-1"
+                    >
+                        <svg
+                            class="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            ></path>
+                        </svg>
+                        Download
+                    </button>
+                    <button
+                        onclick="copyCaddyfile()"
+                        class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 flex items-center gap-1"
+                    >
+                        <svg
+                            class="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                            ></path>
+                        </svg>
+                        Copy
+                    </button>
+                </div>
+            </div>
+            <pre
+                id="caddyfileContent"
+                class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-blue-400 text-sm overflow-x-auto max-h-96 font-mono"
+            ><code>{{ caddyfile_text|default:"Caddyfile format not available" }}</code></pre>
+        </div>
+
+        <!-- Info Tab -->
+        <div id="content-info" class="tab-content hidden">
+            <h2
+                class="text-lg font-semibold text-gray-900 dark:text-white mb-4"
+            >
+                Configuration Details
+            </h2>
+
+            <div class="space-y-4">
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                    <h3
+                        class="text-gray-900 dark:text-white font-semibold mb-3"
+                    >
+                        Site Configuration
+                    </h3>
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600 dark:text-gray-400"
+                                >Hostname:</span
+                            >
+                            <span
+                                class="text-gray-900 dark:text-white font-mono"
+                                >{{ site.host }}</span
+                            >
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600 dark:text-gray-400"
+                                >Protocol:</span
+                            >
+                            <span class="text-gray-900 dark:text-white"
+                                >{{ site.protocol|upper }}</span
+                            >
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600 dark:text-gray-400"
+                                >Auto SSL:</span
+                            >
+                            <span class="text-gray-900 dark:text-white"
+                                >{{ site.auto_ssl|yesno:"Yes,No" }}</span
+                            >
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600 dark:text-gray-400"
+                                >Wildcard Support:</span
+                            >
+                            <span class="text-gray-900 dark:text-white"
+                                >{{ site.support_subdomains|yesno:"Yes,No"
+                                }}</span
+                            >
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600 dark:text-gray-400"
+                                >Status:</span
+                            >
+                            <span
+                                class="px-2 py-1 rounded text-xs font-medium {% if site.status == 'active' %}bg-green-900 text-green-300{% else %}bg-red-900 text-red-300{% endif %}"
+                            >
+                                {{ site.status|upper }}
+                            </span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600 dark:text-gray-400"
+                                >WAF Enabled:</span
+                            >
+                            <span class="text-gray-900 dark:text-white"
+                                >Yes</span
+                            >
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                    <h3
+                        class="text-gray-900 dark:text-white font-semibold mb-3"
+                    >
+                        Deployment Information
+                    </h3>
+                    <div class="space-y-2 text-sm">
+                        <p class="text-gray-600 dark:text-gray-400">
+                            <strong class="text-gray-900 dark:text-white"
+                                >API Endpoint:</strong
+                            >
+                            Use the Caddy Admin API to apply this configuration
+                        </p>
+                        <p class="text-gray-600 dark:text-gray-400">
+                            <strong class="text-gray-900 dark:text-white"
+                                >Method:</strong
+                            >
+                            POST to
+                            <code
+                                class="bg-gray-200 dark:bg-gray-800 px-2 py-1 rounded text-xs"
+                                >/load</code
+                            >
+                            endpoint
+                        </p>
+                        <p class="text-gray-600 dark:text-gray-400">
+                            <strong class="text-gray-900 dark:text-white"
+                                >Automatic Sync:</strong
+                            >
+                            Click "Apply to Caddy" button above to deploy
+                        </p>
+                    </div>
+                </div>
+
+                {% if site.protocol == 'https' %}
+                <div
+                    class="bg-blue-900 bg-opacity-20 border border-blue-500 rounded-lg p-4"
+                >
+                    <div class="flex items-start gap-3">
+                        <svg
+                            class="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                        >
+                            <path
+                                fill-rule="evenodd"
+                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                clip-rule="evenodd"
+                            ></path>
+                        </svg>
+                        <div>
+                            <p class="text-blue-300 text-sm font-medium">
+                                SSL/TLS Configuration
+                            </p>
+                            <p class="text-blue-400 text-xs mt-1">
+                                {% if site.auto_ssl %} This site is configured
+                                for automatic SSL certificate management via
+                                Let's Encrypt. Ensure DNS records are properly
+                                configured. {% else %} This site uses manually
+                                uploaded SSL certificates. Make sure
+                                certificates are valid and up to date. {% endif
+                                %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Help Section -->
+<div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+    >
+        <div class="flex items-start gap-3">
+            <svg
+                class="w-6 h-6 text-blue-500 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+            >
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                ></path>
+            </svg>
+            <div>
+                <h3
+                    class="text-gray-900 dark:text-white font-semibold text-sm mb-1"
+                >
+                    JSON Configuration
+                </h3>
+                <p class="text-gray-600 dark:text-gray-400 text-xs">
+                    Use the JSON configuration with the Caddy Admin API for
+                    dynamic configuration updates.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+    >
+        <div class="flex items-start gap-3">
+            <svg
+                class="w-6 h-6 text-green-500 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+            >
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                ></path>
+            </svg>
+            <div>
+                <h3
+                    class="text-gray-900 dark:text-white font-semibold text-sm mb-1"
+                >
+                    Auto Deploy
+                </h3>
+                <p class="text-gray-600 dark:text-gray-400 text-xs">
+                    Click "Apply to Caddy" to automatically deploy this
+                    configuration to your Caddy server.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+    >
+        <div class="flex items-start gap-3">
+            <svg
+                class="w-6 h-6 text-purple-500 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+            >
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                ></path>
+            </svg>
+            <div>
+                <h3
+                    class="text-gray-900 dark:text-white font-semibold text-sm mb-1"
+                >
+                    Documentation
+                </h3>
+                <p class="text-gray-600 dark:text-gray-400 text-xs">
+                    Visit
+                    <a
+                        href="https://caddyserver.com/docs"
+                        target="_blank"
+                        class="text-blue-600 dark:text-blue-400 hover:underline"
+                        >Caddy Docs</a
+                    >
+                    for more information.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Tab switching
+    function showTab(tabName) {
+        // Hide all tabs
+        document.querySelectorAll(".tab-content").forEach((content) => {
+            content.classList.add("hidden");
+        });
+
+        // Remove active state from all buttons
+        document.querySelectorAll(".tab-button").forEach((button) => {
+            button.classList.remove(
+                "border-blue-500",
+                "text-blue-600",
+                "dark:text-blue-400",
+            );
+            button.classList.add(
+                "border-transparent",
+                "text-gray-600",
+                "dark:text-gray-400",
+            );
+        });
+
+        // Show selected tab
+        document
+            .getElementById("content-" + tabName)
+            .classList.remove("hidden");
+
+        // Activate selected button
+        const activeButton = document.getElementById("tab-" + tabName);
+        activeButton.classList.remove(
+            "border-transparent",
+            "text-gray-600",
+            "dark:text-gray-400",
+        );
+        activeButton.classList.add(
+            "border-blue-500",
+            "text-blue-600",
+            "dark:text-blue-400",
+        );
+    }
+
+    // Copy JSON config
+    function copyConfig() {
+        const config = document.getElementById("configContent").textContent;
+        navigator.clipboard
+            .writeText(config)
+            .then(() => {
+                showNotification(
+                    "Configuration copied to clipboard!",
+                    "success",
+                );
+            })
+            .catch((err) => {
+                console.error("Failed to copy:", err);
+                showNotification("Failed to copy configuration", "error");
+            });
+    }
+
+    // Copy Caddyfile
+    function copyCaddyfile() {
+        const config = document.getElementById("caddyfileContent").textContent;
+        navigator.clipboard
+            .writeText(config)
+            .then(() => {
+                showNotification("Caddyfile copied to clipboard!", "success");
+            })
+            .catch((err) => {
+                console.error("Failed to copy:", err);
+                showNotification("Failed to copy Caddyfile", "error");
+            });
+    }
+
+    // Download configuration
+    function downloadConfig(type) {
+        let content, filename;
+
+        if (type === "json") {
+            content = document.getElementById("configContent").textContent;
+            filename = "{{ site.host }}-caddy-config.json";
+        } else {
+            content = document.getElementById("caddyfileContent").textContent;
+            filename = "{{ site.host }}-Caddyfile";
+        }
+
+        const blob = new Blob([content], { type: "text/plain" });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+
+        showNotification("Downloaded " + filename, "success");
+    }
+
+    // Show notification
+    function showNotification(message, type) {
+        const notification = document.createElement("div");
+        notification.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${
+            type === "success" ? "bg-green-600" : "bg-red-600"
+        } text-white font-medium transition-opacity duration-300`;
+        notification.textContent = message;
+
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.style.opacity = "0";
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 300);
+        }, 3000);
+    }
+</script>
+{% endblock %}

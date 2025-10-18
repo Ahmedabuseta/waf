@@ -1,0 +1,1283 @@
+{% extends "site_management/_base.html" %} {% load static %} {% block title%} Analytics Dashboard - WAF Management{% endblock %} {% block extra_js %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- D3.js (v3) and TopoJSON required by Datamaps -->
+<script src="https://d3js.org/d3.v3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/1.6.9/topojson.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/datamaps@0.5.9/dist/datamaps.world.min.js"></script>
+
+<style>
+    #map-container {
+        position: relative;
+        width: 100%;
+        height: 500px;
+        background: transparent;
+    }
+
+    .datamap {
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+    .datamaps-legend {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        background: rgba(31, 41, 55, 0.95);
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #374151;
+        font-size: 12px;
+        color: #e5e7eb;
+        z-index: 1000;
+    }
+
+    .datamaps-legend dt {
+        float: left;
+        clear: left;
+        width: 80px;
+        margin-bottom: 5px;
+    }
+
+    .datamaps-legend dd {
+        float: left;
+        margin-left: 10px;
+        margin-bottom: 5px;
+    }
+
+    .datamaps-hoverover {
+        position: absolute;
+        background: rgba(31, 41, 55, 0.98);
+        color: #e5e7eb;
+        padding: 12px 16px;
+        border-radius: 8px;
+        border: 1px solid #4b5563;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        pointer-events: none;
+        z-index: 10000;
+        font-size: 13px;
+        line-height: 1.6;
+    }
+
+    .datamaps-hoverover strong {
+        color: #60a5fa;
+        font-size: 14px;
+    }
+
+    #map {
+        height: 600px !important;
+        width: 100% !important;
+        border-radius: 0.5rem;
+        border: 2px solid #e5e7eb;
+        background-color: #ffffff;
+        position: relative;
+        display: block !important;
+    }
+
+    .dark #map {
+        border-color: #4b5563;
+        background-color: #1f2937;
+    }
+
+    .country-layer {
+        stroke: #d1d5db;
+        stroke-width: 1;
+        stroke-opacity: 0.8;
+    }
+
+    .dark .country-layer {
+        stroke: #1f2937;
+    }
+
+    .country-layer:hover {
+        stroke: #2563eb;
+        stroke-width: 2;
+    }
+
+    .country-marker {
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .country-marker:hover {
+        transform: scale(1.1);
+    }
+
+    .custom-tooltip {
+        background: rgba(255, 255, 255, 0.98) !important;
+        color: #111827 !important;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 0.5rem !important;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+    }
+
+    .dark .custom-tooltip {
+        background: rgba(31, 41, 55, 0.95) !important;
+        color: #ffffff !important;
+        border-color: #4b5563 !important;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
+    }
+</style>
+{% endblock %} {% block content %}
+<div id="page-meta" data-current-site="{{ current_site.slug }}" data-days="{{ days }}" style="display: none"></div>
+
+{% if error %}
+<div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert">
+    {{ error }}
+</div>
+{% else %}
+
+<!-- Header with Site Selector and Time Range -->
+<div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            Analytics Dashboard
+        </h1>
+        <p class="text-gray-600 dark:text-gray-400">
+            Geographic request analytics and threat monitoring
+        </p>
+    </div>
+
+    <div class="flex gap-3">
+        <!-- Site Selector -->
+        <select id="site-selector"
+            class="bg-white border border-gray-300 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5">
+            {% for site in sites %}
+            <option value="{{ site.slug }}" {% if site.slug == current_site.slug %}selected{% endif %}>
+                {{ site.host }}
+            </option>
+            {% endfor %}
+        </select>
+
+        <!-- Time Range Selector -->
+        <select id="time-range"
+            class="bg-white border border-gray-300 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5">
+            <option value="1" {% if days == 1 %}selected{% endif %}>
+                Last 24 Hours
+            </option>
+            <option value="7" {% if days == 7 %}selected{% endif %}>
+                Last 7 Days
+            </option>
+            <option value="30" {% if days == 30 %}selected{% endif %}>
+                Last 30 Days
+            </option>
+            <option value="90" {% if days == 90 %}selected{% endif %}>
+                Last 90 Days
+            </option>
+        </select>
+
+        <!-- Export Dropdown -->
+        <button id="dropdownExportButton" data-dropdown-toggle="dropdownExport"
+            class="text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center"
+            type="button">
+            Export
+            <svg class="w-2.5 h-2.5 ms-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
+                viewBox="0 0 10 6">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="m1 1 4 4 4-4" />
+            </svg>
+        </button>
+        <div id="dropdownExport"
+            class="z-10 hidden bg-white dark:bg-gray-700 divide-y divide-gray-100 dark:divide-gray-600 rounded-lg shadow w-44">
+            <ul class="py-2 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownExportButton">
+                <li>
+                    <a href="{% url 'export_csv' current_site.slug %}?days={{ days }}"
+                        class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Export CSV</a>
+                </li>
+                <li>
+                    <a href="{% url 'export_json' current_site.slug %}?days={{ days }}"
+                        class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Export JSON</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Key Metrics Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+    <!-- Total Requests -->
+    <div
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow">
+        <div class="flex items-center justify-between mb-2">
+            <h5 class="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Total Requests
+            </h5>
+            <svg class="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                    d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z">
+                </path>
+            </svg>
+        </div>
+        <p class="text-3xl font-bold text-gray-900 dark:text-white">
+            {{ total_requests|default:"0" }}
+        </p>
+    </div>
+
+    <!-- Blocked Requests -->
+    <div
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow">
+        <div class="flex items-center justify-between mb-2">
+            <h5 class="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Blocked
+            </h5>
+            <svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd"
+                    d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z"
+                    clip-rule="evenodd"></path>
+            </svg>
+        </div>
+        <p class="text-3xl font-bold text-gray-900 dark:text-white">
+            {{ blocked_requests|default:"0" }}
+        </p>
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+            {{ blocked_percentage|floatformat:1 }}%
+        </p>
+    </div>
+
+    <!-- Unique Countries -->
+    <div
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow">
+        <div class="flex items-center justify-between mb-2">
+            <h5 class="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Countries
+            </h5>
+            <svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z"
+                    clip-rule="evenodd"></path>
+            </svg>
+        </div>
+        <p class="text-3xl font-bold text-gray-900 dark:text-white">
+            {{ unique_countries|default:"0" }}
+        </p>
+    </div>
+
+    <!-- Unique IPs -->
+    <div
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow">
+        <div class="flex items-center justify-between mb-2">
+            <h5 class="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Unique IPs
+            </h5>
+            <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path>
+                <path fill-rule="evenodd"
+                    d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+                    clip-rule="evenodd"></path>
+            </svg>
+        </div>
+        <p class="text-3xl font-bold text-gray-900 dark:text-white">
+            {{ unique_ips|default:"0" }}
+        </p>
+    </div>
+
+    <!-- Avg Response Time -->
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5">
+        <div class="flex items-center justify-between mb-2">
+            <h5 class="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Avg Response
+            </h5>
+            <svg class="w-5 h-5 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                    clip-rule="evenodd"></path>
+            </svg>
+        </div>
+        <p class="text-3xl font-bold text-gray-900 dark:text-white">
+            {{ avg_response_time|default:"0" }}
+        </p>
+        <p class="text-sm text-gray-600 dark:text-gray-400">ms</p>
+    </div>
+</div>
+
+<!-- Threat Alerts -->
+{% if recent_alerts %}
+<div class="mb-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5">
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+        <svg class="w-5 h-5 mr-2 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd"
+                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                clip-rule="evenodd"></path>
+        </svg>
+        Active Threat Alerts
+    </h3>
+    <div class="space-y-2">
+        {% for alert in recent_alerts %}
+        <div class="flex items-center justify-between p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+            <div class="flex items-center gap-3">
+                <span
+                    class="px-2 py-1 text-xs font-medium rounded {% if alert.severity == 'critical' %}bg-red-900 text-red-300 {% elif alert.severity == 'high' %}bg-orange-900 text-orange-300 {% else %}bg-yellow-900 text-yellow-300{% endif %}">
+                    {{ alert.severity|upper }}
+                </span>
+                <span class="text-gray-900 dark:text-white">{{ alert.get_alert_type_display }}</span>
+                {% if alert.ip_address %}
+                <span class="text-gray-500 dark:text-gray-400">{{ alert.ip_address }}</span>
+                {% endif %} {% if alert.country_code %}
+                <span class="text-gray-500 dark:text-gray-400">{{ alert.country_code }}</span>
+                {% endif %}
+            </div>
+            <span class="text-sm text-gray-500 dark:text-gray-400">{{ alert.timestamp|timesince }} ago</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Main Content: Map and Geographic Table -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <!-- 2D World Map -->
+    <div class="lg:col-span-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5">
+        <div class="flex justify-between items-center mb-4">
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                    Geographic Distribution
+                </h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Countries highlighted by threat level and traffic volume
+                </p>
+            </div>
+            <div class="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                <div class="hidden sm:flex items-center gap-3">
+                    <div class="flex items-center gap-1">
+                        <div class="w-3 h-3 rounded-full bg-red-600"></div>
+                        <span>Critical</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <div class="w-3 h-3 rounded-full bg-orange-500"></div>
+                        <span>High</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                        <span>Blocked</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <div class="w-3 h-3 rounded-full bg-blue-500"></div>
+                        <span>Active</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1">
+                    <button id="map-zoom-in" class="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">+</button>
+                    <button id="map-zoom-out" class="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">-</button>
+                    <button id="map-zoom-reset" class="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Reset</button>
+                </div>
+            </div>
+        </div>
+        <div id="map-container">
+            <div id="map-loading" style="
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    height: 100%;
+                    color: #9ca3af;
+                ">
+                <div class="text-center">
+                    <svg class="animate-spin h-8 w-8 mx-auto mb-2 text-blue-500" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                        </circle>
+                        <path class="opacity-75" fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                        </path>
+                    </svg>
+                    <p>Loading map...</p>
+                </div>
+            </div>
+        </div>
+        <div id="map-info" class="mt-4 text-sm text-gray-700 dark:text-gray-300 hidden">
+            <div class="p-3 rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Selected Country</div>
+                        <div id="map-info-title" class="text-base font-semibold text-gray-900 dark:text-white"></div>
+                    </div>
+                    <button id="map-info-clear" class="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Clear</button>
+                </div>
+                <div class="mt-2 grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400">Total</div>
+                        <div id="map-info-total" class="font-medium"></div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400">Blocked</div>
+                        <div id="map-info-blocked" class="font-medium"></div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400">Allowed</div>
+                        <div id="map-info-allowed" class="font-medium"></div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400">Threat</div>
+                        <div id="map-info-threat" class="font-medium"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Geographic Breakdown Table -->
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Top Locations
+        </h3>
+        <div class="overflow-auto" style="max-height: 500px">
+            <table id="geo-table" class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                <thead
+                    class="text-xs uppercase bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 sticky top-0">
+                    <tr>
+                        <th class="px-3 py-2">Location</th>
+                        <th class="px-3 py-2 text-right">Requests</th>
+                        <th class="px-3 py-2 text-right">Blocked</th>
+                    </tr>
+                </thead>
+                <tbody id="geo-table-body">
+                    <tr>
+                        <td colspan="3" class="px-3 py-4 text-center">
+                            Loading...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Timeline Chart -->
+<div class="mb-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 shadow-sm">
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        Requests Over Time
+    </h3>
+    <canvas id="timeline-chart" height="80"></canvas>
+</div>
+
+<!-- Bottom Row: Top IPs and Request Methods -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Top IPs -->
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 shadow-sm">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Top Requesting IPs
+        </h3>
+        <div class="overflow-auto" style="max-height: 400px">
+            <table id="top-ips-table" class="w-full text-sm text-left text-gray-600 dark:text-gray-400">
+                <thead
+                    class="text-xs uppercase bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 sticky top-0">
+                    <tr>
+                        <th class="px-3 py-2">IP Address</th>
+                        <th class="px-3 py-2">Country</th>
+                        <th class="px-3 py-2 text-right">Requests</th>
+                        <th class="px-3 py-2 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="top-ips-body">
+                    <tr>
+                        <td colspan="4" class="px-3 py-4 text-center">
+                            Loading...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Request Methods -->
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 shadow-sm">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Request Methods
+        </h3>
+        <canvas id="methods-chart"></canvas>
+    </div>
+</div>
+
+{% endif %}
+
+<script>
+    // Simple and clean analytics dashboard
+    document.addEventListener("DOMContentLoaded", function () {
+        console.log("=== ANALYTICS DASHBOARD LOADING ===");
+
+        // Get current site and days
+        const metaEl = document.getElementById("page-meta");
+        let currentSite = metaEl?.dataset.currentSite || "";
+        const days = Number(metaEl?.dataset.days || "7");
+
+        console.log("Current site:", currentSite);
+        console.log("Current days:", days);
+
+        // If no site is selected, redirect to first site
+        if (!currentSite || currentSite === "") {
+            const siteSelector = document.getElementById("site-selector");
+            if (siteSelector && siteSelector.options.length > 0) {
+                const firstSite = siteSelector.options[0].value;
+                console.log("No site selected, redirecting to:", firstSite);
+                window.location.href =
+                    "/analytics/" +
+                    encodeURIComponent(firstSite) +
+                    "/?days=" +
+                    days;
+                return;
+            } else {
+                console.error("No sites available");
+                const mapLoading = document.getElementById("map-loading");
+                if (mapLoading) {
+                    mapLoading.innerHTML =
+                        '<div class="text-center text-yellow-400"><p class="text-lg font-semibold mb-2">No Sites Configured</p><p class="text-sm">Please add a site first</p></div>';
+                }
+                const geoTableBody = document.getElementById("geo-table-body");
+                if (geoTableBody) {
+                    geoTableBody.innerHTML =
+                        '<tr><td colspan="3" class="px-3 py-4 text-center text-gray-400">No sites available</td></tr>';
+                }
+                const topIpsBody = document.getElementById("top-ips-body");
+                if (topIpsBody) {
+                    topIpsBody.innerHTML =
+                        '<tr><td colspan="4" class="px-3 py-4 text-center text-gray-400">No sites available</td></tr>';
+                }
+                return;
+            }
+        }
+
+        // Initialize Datamap
+        let worldMap = null;
+        let countryData = {};
+
+        function initializeMap(geoData) {
+            const mapContainer = document.getElementById("map-container");
+            const loadingElement = document.getElementById("map-loading");
+
+            if (!mapContainer) {
+                console.error("Map container not found");
+                return;
+            }
+
+            // Hide loading
+            if (loadingElement) {
+                loadingElement.style.display = "none";
+            }
+
+            // Clear previous map
+            mapContainer.innerHTML = "";
+
+            // Prepare data for Datamap
+            const mapData = {};
+            const countryNameToCode = {};
+            const iso2ToIso3 = {
+                "US": "USA", "CA": "CAN", "GB": "GBR", "DE": "DEU", "FR": "FRA", "ES": "ESP", "IT": "ITA",
+                "CN": "CHN", "JP": "JPN", "IN": "IND", "BR": "BRA", "RU": "RUS", "AU": "AUS", "MX": "MEX",
+                "ZA": "ZAF", "NG": "NGA", "EG": "EGY", "TR": "TUR", "KR": "KOR", "SE": "SWE", "NO": "NOR",
+                "FI": "FIN", "DK": "DNK", "NL": "NLD", "BE": "BEL", "PL": "POL", "UA": "UKR", "AR": "ARG",
+                "CL": "CHL", "CO": "COL", "SA": "SAU", "AE": "ARE", "IR": "IRN", "IQ": "IRQ", "PK": "PAK",
+                "BD": "BGD", "ID": "IDN", "TH": "THA", "VN": "VNM", "MY": "MYS", "PH": "PHL", "NZ": "NZL",
+                "IE": "IRL", "PT": "PRT", "GR": "GRC", "AT": "AUT", "CH": "CHE", "CZ": "CZE", "HU": "HUN",
+                "RO": "ROU", "BG": "BGR", "IL": "ISR", "MA": "MAR", "DZ": "DZA", "KE": "KEN", "ET": "ETH",
+                "GH": "GHA", "CI": "CIV", "TN": "TUN", "QA": "QAT", "KW": "KWT", "SG": "SGP", "HK": "HKG",
+                "TW": "TWN"
+            };
+            geoData.forEach((location) => {
+                // Normalize to ISO3 for Datamaps
+                let countryCode = location.country_code || "";
+                if (countryCode && countryCode.length === 2 && iso2ToIso3[countryCode]) {
+                    countryCode = iso2ToIso3[countryCode];
+                }
+                countryData[countryCode] = location;
+                if (location.country) {
+                    countryNameToCode[location.country] = countryCode;
+                }
+
+                // Determine fill key based on threats first, then traffic volume
+                let fillKey = null;
+                if (location.critical_threats > 0) fillKey = "critical";
+                else if (location.high_threats > 0) fillKey = "high";
+                else if (location.blocked > 0) fillKey = "blocked";
+                else if (location.total_requests > 0) {
+                    if (location.total_requests > 1000) fillKey = "traffic-high";
+                    else if (location.total_requests > 100) fillKey = "traffic-med";
+                    else fillKey = "traffic-low";
+                } else {
+                    fillKey = "no-traffic";
+                }
+
+                mapData[countryCode] = {
+                    fillKey: fillKey,
+                    ...location,
+                };
+            });
+
+            // Create the map
+            worldMap = new Datamap({
+                element: mapContainer,
+                responsive: true,
+                fills: {
+                    critical: "#dc2626",
+                    high: "#f97316",
+                    blocked: "#eab308",
+                    // traffic buckets
+                    "traffic-high": "#1d4ed8", // blue-700
+                    "traffic-med": "#60a5fa",  // blue-400
+                    "traffic-low": "#bfdbfe",  // blue-200
+                    "no-traffic": "#93c5fd",   // blue-300 (light baseline for any map area)
+                    // bubble colors
+                    bubbleCritical: "#dc2626",
+                    bubbleHigh: "#f59e0b",
+                    bubbleBlocked: "#eab308",
+                    bubbleNormal: "#3b82f6",
+                    defaultFill: "#374151",
+                },
+                data: mapData,
+                geographyConfig: {
+                    borderColor: "#4b5563",
+                    borderWidth: 0.5,
+                    highlightBorderWidth: 2,
+                    highlightBorderColor: "#60a5fa",
+                    highlightFillColor: function (geo) {
+                        return geo.fillKey === "defaultFill" ? "#4b5563" : null;
+                    },
+                    popupTemplate: function (geo, data) {
+                        if (!data) {
+                            return (
+                                '<div class="hoverinfo custom-tooltip"><strong>' +
+                                geo.properties.name +
+                                "</strong><br>No data available</div>"
+                            );
+                        }
+
+                        const threatLevel =
+                            data.critical_threats > 0
+                                ? "Critical"
+                                : data.high_threats > 0
+                                    ? "High"
+                                    : data.blocked > 0
+                                        ? "Blocked"
+                                        : "Normal";
+
+                        const threatColor =
+                            data.critical_threats > 0
+                                ? "#dc2626"
+                                : data.high_threats > 0
+                                    ? "#f97316"
+                                    : data.blocked > 0
+                                        ? "#eab308"
+                                        : "#10b981";
+
+                        return (
+                            '<div class="hoverinfo custom-tooltip" style="padding: 10px; min-width: 200px;">' +
+                                '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">' +
+                                    '<strong style="font-size: 14px; color: #60a5fa;">' + data.country + '</strong>' +
+                                    '<span style="font-size: 11px; color:#9ca3af;">' + (data.country_code || '') + '</span>' +
+                                '</div>' +
+                                '<div style="display:grid; grid-template-columns: 1fr 1fr; gap: 6px;">' +
+                                    '<div><span style="color:#9ca3af">Total</span><br><strong>' + data.total_requests.toLocaleString() + '</strong></div>' +
+                                    '<div><span style="color:#9ca3af">Blocked</span><br><strong style="color:#ef4444">' + data.blocked.toLocaleString() + '</strong></div>' +
+                                    '<div><span style="color:#9ca3af">Allowed</span><br><strong style="color:#10b981">' + data.allowed.toLocaleString() + '</strong></div>' +
+                                    '<div><span style="color:#9ca3af">Threat</span><br><strong style="color:' + threatColor + '">' + threatLevel + '</strong></div>' +
+                                '</div>' +
+                            '</div>'
+                        );
+                    },
+                },
+                done: function (datamap) {
+                    datamap.svg
+                        .selectAll(".datamaps-subunit")
+                        .on("click", function (geography) {
+                            const countryCode = geography.id;
+                            const data = countryData[countryCode];
+                            if (data) {
+                                console.log(
+                                    "Clicked country:",
+                                    data.country,
+                                    data,
+                                );
+                                focusCountry(countryCode, true);
+                                updateMapInfo(data, countryCode);
+                            }
+                        });
+                },
+            });
+
+            // Bubbles: circles sized by total requests and colored by threat level
+            try {
+                var maxReq = 0;
+                geoData.forEach(function (d) { if (d.total_requests > maxReq) maxReq = d.total_requests; });
+                var radiusScale = function (v) {
+                    if (!maxReq || !v) return 4;
+                    var minR = 4, maxR = 18;
+                    return Math.max(minR, Math.min(maxR, minR + (maxR - minR) * (v / maxReq)));
+                };
+
+                var bubbles = geoData.filter(function (d) { return d.lat && d.lng; }).map(function (d) {
+                    var fillKey = 'bubbleNormal';
+                    if (d.critical_threats > 0) fillKey = 'bubbleCritical';
+                    else if (d.high_threats > 0) fillKey = 'bubbleHigh';
+                    else if (d.blocked > 0) fillKey = 'bubbleBlocked';
+                    return {
+                        name: d.country,
+                        radius: radiusScale(d.total_requests),
+                        latitude: Number(d.lat),
+                        longitude: Number(d.lng),
+                        fillKey: fillKey,
+                        country_code: d.country_code,
+                        total_requests: d.total_requests,
+                        blocked: d.blocked,
+                        allowed: d.allowed,
+                        high_threats: d.high_threats,
+                        critical_threats: d.critical_threats
+                    };
+                });
+
+                worldMap.bubbles(bubbles, {
+                    borderWidth: 1,
+                    borderOpacity: 0.7,
+                    borderColor: '#1f2937',
+                    fillOpacity: 0.6,
+                    popupTemplate: function (geo, data) {
+                        var threatLevel = data.critical_threats > 0 ? 'Critical' : (data.high_threats > 0 ? 'High' : (data.blocked > 0 ? 'Blocked' : 'Normal'));
+                        var threatColor = data.critical_threats > 0 ? '#dc2626' : (data.high_threats > 0 ? '#f97316' : (data.blocked > 0 ? '#eab308' : '#10b981'));
+                        return (
+                            '<div class="hoverinfo custom-tooltip" style="padding: 10px; min-width: 180px;">' +
+                                '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">' +
+                                    '<strong style="font-size: 14px; color: #60a5fa;">' + (data.name || '') + '</strong>' +
+                                    '<span style="font-size: 11px; color:#9ca3af;">' + (data.country_code || '') + '</span>' +
+                                '</div>' +
+                                '<div style="display:grid; grid-template-columns: 1fr 1fr; gap: 6px;">' +
+                                    '<div><span style="color:#9ca3af">Total</span><br><strong>' + (data.total_requests || 0).toLocaleString() + '</strong></div>' +
+                                    '<div><span style="color:#9ca3af">Blocked</span><br><strong style="color:#ef4444">' + (data.blocked || 0).toLocaleString() + '</strong></div>' +
+                                    '<div><span style="color:#9ca3af">Allowed</span><br><strong style="color:#10b981">' + (data.allowed || 0).toLocaleString() + '</strong></div>' +
+                                    '<div><span style="color:#9ca3af">Threat</span><br><strong style="color:' + threatColor + '">' + threatLevel + '</strong></div>' +
+                                '</div>' +
+                            '</div>'
+                        );
+                    }
+                });
+            } catch (e) { }
+
+            // Make map responsive
+            window.addEventListener("resize", function () {
+                if (worldMap) {
+                    worldMap.resize();
+                }
+            });
+
+            // Setup manual zoom/pan controls
+            setupMapZoomControls(mapContainer);
+
+            // Enable mousewheel zoom and drag-to-pan with D3 v3
+            (function enableD3ZoomPan() {
+                var container = document.getElementById("map-container");
+                if (!container) return;
+                var svg = container.querySelector("svg");
+                var g = getMapSvgGroup();
+                if (!svg || !g || !window.d3 || !d3.behavior) return;
+
+                var zoom = d3.behavior.zoom()
+                    .scaleExtent([__mapZoom.min, __mapZoom.max])
+                    .scale(__mapTransform.scale)
+                    .translate(__mapTransform.translate)
+                    .on("zoom", function () {
+                        __mapTransform.translate = d3.event.translate;
+                        __mapTransform.scale = d3.event.scale;
+                        applyMapTransform();
+                    });
+
+                d3.select(svg).call(zoom);
+                // Expose to sync when buttons/focus change the view
+                window.__mapZoomBehavior = zoom;
+            })();
+
+            console.log(
+                "Map initialized with",
+                Object.keys(mapData).length,
+                "countries",
+            );
+
+            // Expose helper for name->code focusing from other tables
+            window._focusCountryByName = function (countryName) {
+                const code = countryNameToCode[countryName];
+                if (code) {
+                    focusCountry(code, true);
+                    const d = countryData[code];
+                    if (d) updateMapInfo(d, code);
+                }
+            };
+
+            // URL-based highlighting: ?highlight=US,CA or names
+            try {
+                var params = new URLSearchParams(window.location.search);
+                var list = params.get("highlight");
+                if (list) {
+                    list.split(",").map(function (s) { return s.trim(); }).forEach(function (item) {
+                        var code = countryNameToCode[item] || item;
+                        focusCountry(code, true);
+                        if (countryData[code]) updateMapInfo(countryData[code], code);
+                    });
+                }
+            } catch (e) { }
+
+            // Programmatic API: window.highlightCountries(["US","CA"]) or names
+            window.highlightCountries = function (items) {
+                if (!items || !items.length) return;
+                items.forEach(function (item) {
+                    var code = countryNameToCode[item] || item;
+                    focusCountry(code, true);
+                    if (countryData[code]) updateMapInfo(countryData[code], code);
+                });
+            };
+        }
+
+        // Site selection
+        const siteSelector = document.getElementById("site-selector");
+        if (siteSelector) {
+            console.log("Site selector found, adding event listener...");
+            siteSelector.addEventListener("change", function () {
+                console.log("Site changed to:", this.value);
+                window.location.href =
+                    "/analytics/" + this.value + "/?days=" + days;
+            });
+        }
+
+        // Time range selection
+        const timeRangeSelector = document.getElementById("time-range");
+        if (timeRangeSelector) {
+            timeRangeSelector.addEventListener("change", function () {
+                window.location.href =
+                    "/analytics/" + currentSite + "/?days=" + this.value;
+            });
+        }
+
+        // Load geographic data
+        console.log("Loading geographic data...");
+        fetch(`/api/analytics/${currentSite}/geographic/?days=${days}`)
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error("Network response was not ok");
+                }
+                return response.json();
+            })
+            .then((data) => {
+                console.log("Geographic data received:", data);
+
+                // Initialize map with data
+                if (data && data.data && data.data.length > 0) {
+                    initializeMap(data.data);
+                } else {
+                    const mapLoading = document.getElementById("map-loading");
+                    if (mapLoading) {
+                        mapLoading.innerHTML =
+                            '<div class="text-center text-gray-400"><p class="text-lg font-semibold mb-2">No Data Available</p><p class="text-sm">No requests recorded for this time period</p></div>';
+                    }
+                }
+
+                // Populate geographic table
+                const tbody = document.getElementById("geo-table-body");
+                if (tbody && data.data && data.data.length > 0) {
+                    tbody.innerHTML = "";
+                    data.data.slice(0, 20).forEach((row) => {
+                        tbody.innerHTML += `
+                            <tr class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <td class="px-3 py-2">
+                                    <button onclick="focusCountry('${row.country_code || ''}', true)" class="font-medium text-blue-600 dark:text-blue-400 hover:underline">${row.country}</button>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">${row.country_code || ''}</div>
+                                </td>
+                                <td class="px-3 py-2 text-right text-gray-900 dark:text-white">${row.total_requests.toLocaleString()}</td>
+                                <td class="px-3 py-2 text-right ${row.blocked > 0 ? "text-red-500 dark:text-red-400" : "text-green-500 dark:text-green-400"}">${row.blocked.toLocaleString()}</td>
+                            </tr>
+                        `;
+                    });
+                } else if (tbody) {
+                    tbody.innerHTML =
+                        '<tr><td colspan="3" class="px-3 py-4 text-center text-gray-400">No data available</td></tr>';
+                }
+            })
+            .catch((error) => {
+                console.error("Error loading geographic data:", error);
+                const mapLoading = document.getElementById("map-loading");
+                if (mapLoading) {
+                    mapLoading.innerHTML =
+                        '<div class="text-center text-red-400"><p class="text-lg font-semibold mb-2">Error Loading Map</p><p class="text-sm">' +
+                        error.message +
+                        "</p></div>";
+                }
+                const tbody = document.getElementById("geo-table-body");
+                if (tbody) {
+                    tbody.innerHTML =
+                        '<tr><td colspan="3" class="px-3 py-4 text-center text-red-400">Error loading data</td></tr>';
+                }
+            });
+
+        // Load timeline chart
+        console.log("Loading timeline data...");
+        fetch(`/api/analytics/${currentSite}/timeline/?days=${days}`)
+            .then((response) => {
+                if (!response.ok)
+                    throw new Error("Timeline data not available");
+                return response.json();
+            })
+            .then((data) => {
+                console.log("Timeline data received");
+                const ctx = document.getElementById("timeline-chart");
+                if (!ctx) {
+                    console.error("Timeline chart canvas not found");
+                    return;
+                }
+                new Chart(ctx.getContext("2d"), {
+                    type: "line",
+                    data: {
+                        labels: data.labels,
+                        datasets: [
+                            {
+                                label: "Total",
+                                data: data.total,
+                                borderColor: "rgb(59, 130, 246)",
+                                backgroundColor: "rgba(59, 130, 246, 0.1)",
+                                tension: 0.3,
+                            },
+                            {
+                                label: "Blocked",
+                                data: data.blocked,
+                                borderColor: "rgb(239, 68, 68)",
+                                backgroundColor: "rgba(239, 68, 68, 0.1)",
+                                tension: 0.3,
+                            },
+                        ],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: document.documentElement.classList.contains(
+                                        "dark",
+                                    )
+                                        ? "rgb(156, 163, 175)"
+                                        : "rgb(75, 85, 99)",
+                                },
+                            },
+                        },
+                        scales: {
+                            y: {
+                                ticks: {
+                                    color: document.documentElement.classList.contains(
+                                        "dark",
+                                    )
+                                        ? "rgb(156, 163, 175)"
+                                        : "rgb(75, 85, 99)",
+                                },
+                                grid: {
+                                    color: document.documentElement.classList.contains(
+                                        "dark",
+                                    )
+                                        ? "rgba(75, 85, 99, 0.3)"
+                                        : "rgba(229, 231, 235, 0.8)",
+                                },
+                            },
+                            x: {
+                                ticks: {
+                                    color: document.documentElement.classList.contains(
+                                        "dark",
+                                    )
+                                        ? "rgb(156, 163, 175)"
+                                        : "rgb(75, 85, 99)",
+                                },
+                                grid: {
+                                    color: document.documentElement.classList.contains(
+                                        "dark",
+                                    )
+                                        ? "rgba(75, 85, 99, 0.3)"
+                                        : "rgba(229, 231, 235, 0.8)",
+                                },
+                            },
+                        },
+                    },
+                });
+            })
+            .catch((error) => {
+                console.error("Error loading timeline data:", error);
+            });
+
+        // Load top IPs table
+        console.log("Loading top IPs data...");
+        fetch(`/api/analytics/${currentSite}/top-ips/?days=${days}`)
+            .then((response) => {
+                if (!response.ok) throw new Error("Top IPs data not available");
+                return response.json();
+            })
+            .then((data) => {
+                console.log("Top IPs data received");
+                const tbody = document.getElementById("top-ips-body");
+                if (!tbody) return;
+
+                if (data && data.data && data.data.length > 0) {
+                    tbody.innerHTML = "";
+                    data.data.forEach((row) => {
+                        tbody.innerHTML += `
+                            <tr class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <td class="px-3 py-2 text-gray-900 dark:text-white font-mono">${row.ip}</td>
+                                <td class="px-3 py-2 text-gray-700 dark:text-gray-400">
+                                    <button class="hover:underline text-blue-600 dark:text-blue-400" onclick="window._focusCountryByName && window._focusCountryByName('${row.country || ''}')">${row.country || "Unknown"}</button>
+                                </td>
+                                <td class="px-3 py-2 text-right text-gray-900 dark:text-white">${row.requests}</td>
+                                <td class="px-3 py-2 text-center">
+                                    <button onclick="blacklistIP('${row.ip}')" class="text-red-500 hover:text-red-400 text-xs">Block</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tbody.innerHTML =
+                        '<tr><td colspan="4" class="px-3 py-4 text-center text-gray-400">No data available</td></tr>';
+                }
+            })
+            .catch((error) => {
+                console.error("Error loading top IPs data:", error);
+                const tbody = document.getElementById("top-ips-body");
+                if (tbody) {
+                    tbody.innerHTML =
+                        '<tr><td colspan="4" class="px-3 py-4 text-center text-red-400">Error loading data</td></tr>';
+                }
+            });
+
+        // Load methods chart
+        console.log("Loading methods data...");
+        fetch(`/api/analytics/${currentSite}/methods/?days=${days}`)
+            .then((response) => {
+                if (!response.ok) throw new Error("Methods data not available");
+                return response.json();
+            })
+            .then((data) => {
+                console.log("Methods data received");
+                const ctx = document.getElementById("methods-chart");
+                if (!ctx) {
+                    console.error("Methods chart canvas not found");
+                    return;
+                }
+                new Chart(ctx.getContext("2d"), {
+                    type: "doughnut",
+                    data: {
+                        labels: data.labels,
+                        datasets: [
+                            {
+                                data: data.values,
+                                backgroundColor: [
+                                    "rgb(59, 130, 246)",
+                                    "rgb(34, 197, 94)",
+                                    "rgb(234, 179, 8)",
+                                    "rgb(239, 68, 68)",
+                                ],
+                            },
+                        ],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                position: "bottom",
+                                labels: {
+                                    color: document.documentElement.classList.contains(
+                                        "dark",
+                                    )
+                                        ? "rgb(156, 163, 175)"
+                                        : "rgb(75, 85, 99)",
+                                },
+                            },
+                        },
+                    },
+                });
+            })
+            .catch((error) => {
+                console.error("Error loading methods data:", error);
+            });
+
+        console.log("=== ANALYTICS DASHBOARD LOADED ===");
+    });
+
+    // Blacklist IP function (global scope)
+    function blacklistIP(ip) {
+        if (!confirm(`Are you sure you want to blacklist IP ${ip}?`)) return;
+
+        fetch(`/api/analytics/{{ current_site.slug }}/blacklist/`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": "{{ csrf_token }}",
+            },
+            body: JSON.stringify({ ip_address: ip }),
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                alert(data.message);
+                location.reload();
+            })
+            .catch((error) => {
+                alert("Error blacklisting IP");
+                console.error(error);
+            });
+    }
+
+    // Map zoom/pan and focus helpers (global scope)
+    let __mapTransform = { scale: 1, translate: [0, 0] };
+    const __mapZoom = { min: 1, max: 12, step: 1.4 };
+
+    function getMapSvgGroup() {
+        const container = document.getElementById("map-container");
+        if (!container) return null;
+        const svg = container.querySelector("svg");
+        if (!svg) return null;
+        // Datamaps places subunits inside first <g>
+        return svg.querySelector("g");
+    }
+
+    function applyMapTransform() {
+        const g = getMapSvgGroup();
+        if (!g) return;
+        g.setAttribute(
+            "transform",
+            "translate(" + __mapTransform.translate.join(",") + ") scale(" + __mapTransform.scale + ")"
+        );
+    }
+
+    function setMapScale(newScale, centerOnCenter) {
+        const container = document.getElementById("map-container");
+        const svg = container ? container.querySelector("svg") : null;
+        if (!svg) return;
+        const rect = svg.getBoundingClientRect();
+        const cx = rect.width / 2;
+        const cy = rect.height / 2;
+        const k = Math.max(__mapZoom.min, Math.min(__mapZoom.max, newScale));
+        if (centerOnCenter) {
+            // Keep the center stable when changing scale
+            __mapTransform.translate = [
+                cx - (cx - __mapTransform.translate[0]) * (k / __mapTransform.scale),
+                cy - (cy - __mapTransform.translate[1]) * (k / __mapTransform.scale),
+            ];
+        }
+        __mapTransform.scale = k;
+        applyMapTransform();
+        if (window.__mapZoomBehavior) {
+            window.__mapZoomBehavior.scale(__mapTransform.scale);
+            window.__mapZoomBehavior.translate(__mapTransform.translate);
+        }
+    }
+
+    function zoomBy(factor) {
+        setMapScale(__mapTransform.scale * factor, true);
+    }
+
+    function resetZoom() {
+        __mapTransform.scale = 1;
+        __mapTransform.translate = [0, 0];
+        applyMapTransform();
+        if (window.__mapZoomBehavior) {
+            window.__mapZoomBehavior.scale(__mapTransform.scale);
+            window.__mapZoomBehavior.translate(__mapTransform.translate);
+        }
+    }
+
+    function setupMapZoomControls(containerEl) {
+        const inBtn = document.getElementById("map-zoom-in");
+        const outBtn = document.getElementById("map-zoom-out");
+        const resetBtn = document.getElementById("map-zoom-reset");
+        if (inBtn) inBtn.addEventListener("click", function () { zoomBy(__mapZoom.step); });
+        if (outBtn) outBtn.addEventListener("click", function () { zoomBy(1 / __mapZoom.step); });
+        if (resetBtn) resetBtn.addEventListener("click", function () { resetZoom(); });
+    }
+
+    function focusCountry(countryCode, highlightOnly) {
+        if (!countryCode) return;
+        const container = document.getElementById("map-container");
+        if (!container) return;
+        const svg = container.querySelector("svg");
+        const g = getMapSvgGroup();
+        if (!svg || !g) return;
+
+        // Find the country path by id attribute
+        var targetPath = null;
+        var paths = g.querySelectorAll(".datamaps-subunit");
+        for (var i = 0; i < paths.length; i++) {
+            var p = paths[i];
+            if (p.getAttribute("data-info")) {
+                try {
+                    var info = JSON.parse(p.getAttribute("data-info"));
+                    if (info && (info.id === countryCode || info.iso3 === countryCode)) {
+                        targetPath = p;
+                        break;
+                    }
+                } catch (e) { }
+            }
+            if (p.getAttribute("id") === countryCode || p.getAttribute("data-id") === countryCode) {
+                targetPath = p;
+                break;
+            }
+        }
+        if (!targetPath) {
+            // Fallback: try class-based selector
+            targetPath = g.querySelector(".datamaps-subunit." + countryCode);
+        }
+        if (!targetPath) return;
+
+        // Highlight
+        try {
+            var originalStroke = targetPath.getAttribute("data-orig-stroke") || targetPath.getAttribute("stroke") || "#4b5563";
+            var originalStrokeWidth = targetPath.getAttribute("data-orig-stroke-width") || targetPath.getAttribute("stroke-width") || 0.5;
+            targetPath.setAttribute("data-orig-stroke", originalStroke);
+            targetPath.setAttribute("data-orig-stroke-width", originalStrokeWidth);
+            targetPath.setAttribute("stroke", "#60a5fa");
+            targetPath.setAttribute("stroke-width", 2.5);
+            setTimeout(function () {
+                targetPath.setAttribute("stroke", originalStroke);
+                targetPath.setAttribute("stroke-width", originalStrokeWidth);
+            }, 1800);
+        } catch (e) { }
+
+        if (highlightOnly) {
+            // Also zoom to fit
+            var bbox = targetPath.getBBox();
+            var svgRect = svg.getBoundingClientRect();
+            var padding = 40;
+            var scale = Math.min(
+                (svgRect.width - padding * 2) / bbox.width,
+                (svgRect.height - padding * 2) / bbox.height
+            );
+            scale = Math.max(__mapZoom.min, Math.min(__mapZoom.max, scale));
+            var x = -bbox.x * scale + (svgRect.width - bbox.width * scale) / 2;
+            var y = -bbox.y * scale + (svgRect.height - bbox.height * scale) / 2;
+            __mapTransform.scale = scale;
+            __mapTransform.translate = [x, y];
+            applyMapTransform();
+            if (window.__mapZoomBehavior) {
+                window.__mapZoomBehavior.scale(__mapTransform.scale);
+                window.__mapZoomBehavior.translate(__mapTransform.translate);
+            }
+        }
+    }
+
+    function updateMapInfo(data, code) {
+        var panel = document.getElementById("map-info");
+        if (!panel) return;
+        var title = document.getElementById("map-info-title");
+        var total = document.getElementById("map-info-total");
+        var blocked = document.getElementById("map-info-blocked");
+        var allowed = document.getElementById("map-info-allowed");
+        var threat = document.getElementById("map-info-threat");
+        if (!title || !total || !blocked || !allowed || !threat) return;
+
+        title.textContent = (data.country || code) + " (" + code + ")";
+        total.textContent = (data.total_requests || 0).toLocaleString();
+        blocked.textContent = (data.blocked || 0).toLocaleString();
+        allowed.textContent = (data.allowed || 0).toLocaleString();
+        var tl = "Normal";
+        if (data.critical_threats > 0) tl = "Critical";
+        else if (data.high_threats > 0) tl = "High";
+        threat.textContent = tl;
+
+        panel.classList.remove("hidden");
+
+        var clearBtn = document.getElementById("map-info-clear");
+        if (clearBtn && !clearBtn.__bound) {
+            clearBtn.addEventListener("click", function () {
+                panel.classList.add("hidden");
+                resetZoom();
+            });
+            clearBtn.__bound = true;
+        }
+    }
+</script>
+{% endblock %}

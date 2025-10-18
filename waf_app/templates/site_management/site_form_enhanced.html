@@ -1,0 +1,448 @@
+{% extends "site_management/_base.html" %}
+
+{% block title %}{% if is_edit %}Edit{% else %}Add{% endif %} Site - WAF Management{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+        {% if is_edit %}Edit Site{% else %}Add New Site{% endif %}
+    </h1>
+    <p class="text-gray-600 dark:text-gray-400">
+        {% if is_edit %}Update site configuration and SSL settings{% else %}Configure a new protected site with SSL/TLS validation{% endif %}
+    </p>
+</div>
+
+<div class="max-w-5xl">
+    <form method="POST" enctype="multipart/form-data" id="siteForm" class="space-y-6">
+        {% csrf_token %}
+
+        <!-- Basic Configuration Section -->
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
+                </svg>
+                Basic Configuration
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Host -->
+                <div class="md:col-span-2">
+                    <label for="host" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                        Host / Domain *
+                    </label>
+                    <input type="text" id="host" name="host" value="{% if site %}{{ site.host }}{% endif %}"
+                        class="bg-white border border-gray-300 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                        placeholder="example.com or 192.168.1.100" required>
+                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                        Domain name or IP address (e.g., example.com, api.example.com)
+                    </p>
+                </div>
+
+                <!-- Protocol -->
+                <div>
+                    <label for="protocol" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                        Protocol *
+                    </label>
+                    <select id="protocol" name="protocol"
+                        class="bg-white border border-gray-300 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                        required onchange="updateSSLFields()">
+                        <option value="http" {% if site and site.protocol == 'http' %}selected{% endif %}>HTTP</option>
+                        <option value="https" {% if site and site.protocol == 'https' %}selected{% elif not site %}selected{% endif %}>HTTPS</option>
+                    </select>
+                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                        <span id="protocol-help-http" class="hidden">⚠️ HTTP is not secure. Consider using HTTPS.</span>
+                        <span id="protocol-help-https">✓ HTTPS provides encrypted connections.</span>
+                    </p>
+                </div>
+
+                <!-- Status -->
+                <div>
+                    <label for="status" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                        Status *
+                    </label>
+                    <select id="status" name="status"
+                        class="bg-white border border-gray-300 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required>
+                        <option value="active" {% if site and site.status == 'active' or not site %}selected{% endif %}>Active</option>
+                        <option value="inactive" {% if site and site.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- SSL/TLS Configuration Section -->
+        <div id="ssl-section" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                </svg>
+                SSL/TLS Configuration
+            </h2>
+
+            <!-- Auto SSL Option -->
+            <div class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <div class="flex items-start">
+                    <input id="auto_ssl" name="auto_ssl" type="checkbox"
+                        class="w-4 h-4 mt-1 text-blue-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+                        {% if site and site.auto_ssl or not site %}checked{% endif %}
+                        onchange="toggleSSLMode()">
+                    <div class="ml-3">
+                        <label for="auto_ssl" class="font-medium text-gray-900 dark:text-white">
+                            Enable Automatic SSL (Let's Encrypt)
+                        </label>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                            Automatically obtain and renew SSL certificates from Let's Encrypt.
+                            Certificates are free and renew every 90 days automatically.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subdomain Support -->
+            <div id="subdomain-section" class="mb-6 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
+                <div class="flex items-start">
+                    <input id="support_subdomains" name="support_subdomains" type="checkbox"
+                        class="w-4 h-4 mt-1 text-purple-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-purple-500 focus:ring-2"
+                        {% if site and site.support_subdomains %}checked{% endif %}
+                        onchange="checkSubdomainRequirements()">
+                    <div class="ml-3 flex-1">
+                        <label for="support_subdomains" class="font-medium text-gray-900 dark:text-white">
+                            Support Subdomains (Wildcard Certificate)
+                        </label>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                            Enable wildcard certificate (*.example.com) to cover all subdomains.
+                            <span class="font-semibold">Requires DNS-01 challenge.</span>
+                        </p>
+
+                        <!-- DNS Challenge Warning -->
+                        <div id="dns-challenge-warning" class="hidden mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-800 rounded-lg">
+                            <div class="flex items-start">
+                                <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                </svg>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-yellow-800 dark:text-yellow-300">
+                                        DNS Challenge Required
+                                    </p>
+                                    <p class="text-sm text-yellow-700 dark:text-yellow-400 mt-1">
+                                        You will need to create a TXT record in your DNS provider.
+                                        Instructions will be provided after saving.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Manual Certificate Upload -->
+            <div id="manual-ssl-section" class="hidden">
+                <div class="space-y-4 p-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 rounded-lg">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Upload SSL Certificates</h3>
+
+                    <!-- Certificate File -->
+                    <div>
+                        <label for="ssl_certificate" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                            SSL Certificate * (.pem, .crt, .cer)
+                        </label>
+                        <input type="file" id="ssl_certificate" name="ssl_certificate" accept=".pem,.crt,.cer"
+                            class="block w-full text-sm text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer bg-white dark:bg-gray-700 focus:outline-none"
+                            onchange="validateCertificateUpload()">
+                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                            Upload your SSL certificate in PEM format
+                        </p>
+                        <div id="cert-validation-result" class="mt-2"></div>
+                    </div>
+
+                    <!-- Private Key File -->
+                    <div>
+                        <label for="ssl_key" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                            Private Key * (.pem, .key)
+                        </label>
+                        <input type="file" id="ssl_key" name="ssl_key" accept=".pem,.key"
+                            class="block w-full text-sm text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer bg-white dark:bg-gray-700 focus:outline-none"
+                            onchange="validateCertificateUpload()">
+                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                            Upload your private key in PEM format
+                        </p>
+                    </div>
+
+                    <!-- Certificate Chain (Optional) -->
+                    <div>
+                        <label for="ssl_chain" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                            Certificate Chain (Optional) (.pem, .crt, .cer)
+                        </label>
+                        <input type="file" id="ssl_chain" name="ssl_chain" accept=".pem,.crt,.cer"
+                            class="block w-full text-sm text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer bg-white dark:bg-gray-700 focus:outline-none">
+                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                            Recommended: Upload intermediate certificates for better compatibility
+                        </p>
+                    </div>
+
+                    <!-- Validate Button -->
+                    <button type="button" onclick="validateCertificates()"
+                        class="text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:outline-none focus:ring-green-800 font-medium rounded-lg text-sm px-4 py-2">
+                        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Validate Certificates
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- WAF Configuration Section -->
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                </svg>
+                WAF Settings
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Action Type -->
+                <div>
+                    <label for="action_type" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                        Action Type *
+                    </label>
+                    <select id="action_type" name="action_type"
+                        class="bg-white border border-gray-300 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required>
+                        <option value="block" {% if site and site.action_type == 'block' %}selected{% endif %}>Block</option>
+                        <option value="log" {% if site and site.action_type == 'log' or not site %}selected{% endif %}>Log Only</option>
+                    </select>
+                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                        Block threats immediately or log for analysis
+                    </p>
+                </div>
+
+                <!-- Sensitivity Level -->
+                <div>
+                    <label for="sensitivity_level" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                        Sensitivity Level *
+                    </label>
+                    <select id="sensitivity_level" name="sensitivity_level"
+                        class="bg-white border border-gray-300 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required>
+                        <option value="low" {% if site and site.sensitivity_level == 'low' %}selected{% endif %}>Low (Relaxed)</option>
+                        <option value="medium" {% if site and site.sensitivity_level == 'medium' or not site %}selected{% endif %}>Medium (Balanced)</option>
+                        <option value="high" {% if site and site.sensitivity_level == 'high' %}selected{% endif %}>High (Strict)</option>
+                    </select>
+                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                        Detection sensitivity for security threats
+                    </p>
+                </div>
+
+                <!-- WAF Template -->
+                <div class="md:col-span-2">
+                    <label for="waf_template" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                        WAF Template (Optional)
+                    </label>
+                    <select id="waf_template" name="waf_template"
+                        class="bg-white border border-gray-300 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                        <option value="">None (Use default rules)</option>
+                        {% for template in waf_templates %}
+                        <option value="{{ template.id }}" {% if site and site.WafTemplate and site.WafTemplate.id == template.id %}selected{% endif %}>
+                            {{ template.name }} ({{ template.get_template_type_display }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                        Apply pre-configured security rules
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="flex gap-3 items-center">
+            <button type="submit"
+                class="text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-800 font-medium rounded-lg text-sm px-6 py-3 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                {% if is_edit %}Update Site{% else %}Create Site{% endif %}
+            </button>
+
+            <a href="{% if site %}{% url 'site_detail' site.slug %}{% else %}{% url 'sites_list' %}{% endif %}"
+                class="text-gray-700 dark:text-white border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-4 focus:outline-none focus:ring-gray-200 dark:focus:ring-gray-800 font-medium rounded-lg text-sm px-6 py-3">
+                Cancel
+            </a>
+
+            <div class="ml-auto text-sm text-gray-600 dark:text-gray-400">
+                * Required fields
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Update SSL fields based on protocol selection
+function updateSSLFields() {
+    const protocol = document.getElementById('protocol').value;
+    const sslSection = document.getElementById('ssl-section');
+    const httpHelp = document.getElementById('protocol-help-http');
+    const httpsHelp = document.getElementById('protocol-help-https');
+
+    if (protocol === 'http') {
+        sslSection.classList.add('opacity-50', 'pointer-events-none');
+        document.getElementById('auto_ssl').checked = false;
+        document.getElementById('support_subdomains').checked = false;
+        httpHelp.classList.remove('hidden');
+        httpsHelp.classList.add('hidden');
+        toggleSSLMode();
+    } else {
+        sslSection.classList.remove('opacity-50', 'pointer-events-none');
+        httpHelp.classList.add('hidden');
+        httpsHelp.classList.remove('hidden');
+    }
+}
+
+// Toggle between auto SSL and manual SSL
+function toggleSSLMode() {
+    const autoSSL = document.getElementById('auto_ssl').checked;
+    const manualSection = document.getElementById('manual-ssl-section');
+    const subdomainSection = document.getElementById('subdomain-section');
+
+    if (autoSSL) {
+        manualSection.classList.add('hidden');
+        subdomainSection.classList.remove('hidden');
+        // Clear manual certificate fields
+        document.getElementById('ssl_certificate').value = '';
+        document.getElementById('ssl_key').value = '';
+        document.getElementById('ssl_chain').value = '';
+    } else {
+        manualSection.classList.remove('hidden');
+        subdomainSection.classList.remove('hidden');
+    }
+
+    checkSubdomainRequirements();
+}
+
+// Check subdomain requirements
+function checkSubdomainRequirements() {
+    const supportSubdomains = document.getElementById('support_subdomains').checked;
+    const autoSSL = document.getElementById('auto_ssl').checked;
+    const dnsWarning = document.getElementById('dns-challenge-warning');
+
+    if (supportSubdomains && autoSSL) {
+        dnsWarning.classList.remove('hidden');
+    } else {
+        dnsWarning.classList.add('hidden');
+    }
+}
+
+// Validate certificate upload (client-side preview)
+function validateCertificateUpload() {
+    const certFile = document.getElementById('ssl_certificate').files[0];
+    const keyFile = document.getElementById('ssl_key').files[0];
+    const resultDiv = document.getElementById('cert-validation-result');
+
+    if (certFile && keyFile) {
+        resultDiv.innerHTML = `
+            <div class="p-3 text-sm text-blue-800 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p class="font-medium">Files selected:</p>
+                <ul class="list-disc list-inside mt-1">
+                    <li>Certificate: ${certFile.name} (${(certFile.size / 1024).toFixed(2)} KB)</li>
+                    <li>Private Key: ${keyFile.name} (${(keyFile.size / 1024).toFixed(2)} KB)</li>
+                </ul>
+                <p class="mt-2">Click "Validate Certificates" to check if they are valid.</p>
+            </div>
+        `;
+    }
+}
+
+// Validate certificates via API
+async function validateCertificates() {
+    const certFile = document.getElementById('ssl_certificate').files[0];
+    const keyFile = document.getElementById('ssl_key').files[0];
+    const chainFile = document.getElementById('ssl_chain').files[0];
+    const host = document.getElementById('host').value;
+    const supportSubdomains = document.getElementById('support_subdomains').checked;
+    const resultDiv = document.getElementById('cert-validation-result');
+
+    if (!certFile || !keyFile) {
+        resultDiv.innerHTML = `
+            <div class="p-3 text-sm text-red-800 bg-red-50 dark:bg-red-900/20 dark:text-red-300 border border-red-200 dark:border-red-800 rounded-lg">
+                Please select both certificate and private key files.
+            </div>
+        `;
+        return;
+    }
+
+    resultDiv.innerHTML = `
+        <div class="p-3 text-sm text-blue-800 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <svg class="inline w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Validating certificates...
+        </div>
+    `;
+
+    const formData = new FormData();
+    formData.append('certificate', certFile);
+    formData.append('private_key', keyFile);
+    if (chainFile) formData.append('chain', chainFile);
+    formData.append('host', host);
+    formData.append('support_subdomains', supportSubdomains);
+
+    try {
+        const response = await fetch('{% url "validate_ssl_api" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.valid) {
+            let certInfo = '';
+            if (data.certificate_info) {
+                const info = data.certificate_info;
+                certInfo = `
+                    <ul class="list-disc list-inside mt-2">
+                        <li>Common Name: ${info.common_name || 'N/A'}</li>
+                        <li>Valid Until: ${info.valid_until || 'N/A'}</li>
+                        <li>Days Until Expiry: ${info.days_until_expiry || 'N/A'}</li>
+                        ${info.has_wildcard ? '<li class="font-semibold">✓ Wildcard certificate detected</li>' : ''}
+                    </ul>
+                `;
+            }
+
+            resultDiv.innerHTML = `
+                <div class="p-3 text-sm text-green-800 bg-green-50 dark:bg-green-900/20 dark:text-green-300 border border-green-200 dark:border-green-800 rounded-lg">
+                    <p class="font-medium">✓ Certificates are valid!</p>
+                    ${certInfo}
+                </div>
+            `;
+        } else {
+            resultDiv.innerHTML = `
+                <div class="p-3 text-sm text-red-800 bg-red-50 dark:bg-red-900/20 dark:text-red-300 border border-red-200 dark:border-red-800 rounded-lg">
+                    <p class="font-medium">✗ Certificate validation failed:</p>
+                    <ul class="list-disc list-inside mt-2">
+                        ${data.errors.map(err => `<li>${err}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+    } catch (error) {
+        resultDiv.innerHTML = `
+            <div class="p-3 text-sm text-red-800 bg-red-50 dark:bg-red-900/20 dark:text-red-300 border border-red-200 dark:border-red-800 rounded-lg">
+                Error validating certificates: ${error.message}
+            </div>
+        `;
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateSSLFields();
+    toggleSSLMode();
+    checkSubdomainRequirements();
+});
+</script>
+{% endblock %}

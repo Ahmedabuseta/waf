@@ -1,0 +1,171 @@
+2025-10-16 20:56:00 - caddy_manager - INFO - [test.lockdd] ADD_SITE_START - SUCCESS
+Details: {
+  "domain": "test.lockdd",
+  "addresses": [
+    {
+      "ip_address": "127.0.0.1",
+      "port": 3000,
+      "is_allowed": true
+    }
+  ],
+  "protocol": "https",
+  "auto_ssl": true,
+  "support_subdomains": false
+}
+2025-10-16 20:56:00 - caddy_manager - INFO - CERT: [test.lockdd] AUTO_SSL_SELECTED - SUCCESS
+Certificate Info: {
+  "type": "auto_single",
+  "reason": "no valid certificates found, using Let's Encrypt",
+  "requires_dns_challenge": false
+}
+2025-10-16 20:56:00 - caddy_manager - INFO - [test.lockdd] CONFIG_UPDATE - SUCCESS
+Config file saved: config_20251016_205600.caddy
+2025-10-16 20:56:00 - caddy_manager - INFO - CADDY_RELOAD - SUCCESS (took 0.13s)
+Output: {"level":"info","ts":1760648160.505331,"msg":"using config from file","file":"/etc/caddy/Caddyfile"}
+{"level":"info","ts":1760648160.505996,"msg":"adapted config to JSON","adapter":"caddyfile"}
+{"level":"warn","ts":1760648160.506006,"msg":"Caddyfile input is not formatted; run 'caddy fmt --overwrite' to fix inconsistencies","adapter":"caddyfile","file":"/etc/caddy/Caddyfile","line":1}
+
+2025-10-16 20:56:00 - caddy_manager - INFO - [test.lockdd] ADD_SITE_COMPLETE - SUCCESS
+Details: {
+  "domain": "test.lockdd",
+  "addresses": [
+    {
+      "ip_address": "127.0.0.1",
+      "port": 3000,
+      "is_allowed": true
+    }
+  ],
+  "protocol": "https",
+  "auto_ssl": true,
+  "support_subdomains": false,
+  "ssl_strategy": {
+    "type": "auto_single",
+    "reason": "no valid certificates found, using Let's Encrypt",
+    "requires_dns_challenge": false
+  },
+  "reload_success": true,
+  "duration": 0.13216733932495117
+}
+2025-10-16 20:56:00 - caddy_manager - INFO - [test.lock] ADD_SITE_START - SUCCESS
+Details: {
+  "domain": "test.lock",
+  "addresses": [
+    {
+      "ip_address": "127.0.0.1",
+      "port": 3000,
+      "is_allowed": true
+    }
+  ],
+  "protocol": "http",
+  "auto_ssl": false,
+  "support_subdomains": false
+}
+2025-10-16 20:56:00 - caddy_manager - INFO - [test.lock] CONFIG_UPDATE - SUCCESS
+Config file saved: config_20251016_205600.caddy
+2025-10-16 20:56:00 - caddy_manager - INFO - CADDY_RELOAD - SUCCESS (took 0.07s)
+Output: {"level":"info","ts":1760648160.5804505,"msg":"using config from file","file":"/etc/caddy/Caddyfile"}
+{"level":"info","ts":1760648160.5807734,"msg":"adapted config to JSON","adapter":"caddyfile"}
+{"level":"warn","ts":1760648160.5807805,"msg":"Caddyfile input is not formatted; run 'caddy fmt --overwrite' to fix inconsistencies","adapter":"caddyfile","file":"/etc/caddy/Caddyfile","line":1}
+
+2025-10-16 20:56:00 - caddy_manager - INFO - [test.lock] ADD_SITE_COMPLETE - SUCCESS
+Details: {
+  "domain": "test.lock",
+  "addresses": [
+    {
+      "ip_address": "127.0.0.1",
+      "port": 3000,
+      "is_allowed": true
+    }
+  ],
+  "protocol": "http",
+  "auto_ssl": false,
+  "support_subdomains": false,
+  "ssl_strategy": {
+    "type": "none",
+    "reason": "HTTP protocol"
+  },
+  "reload_success": true,
+  "duration": 0.06993412971496582
+}
+2025-10-16 20:56:00 - caddy_manager - INFO - [test.co] ADD_SITE_START - SUCCESS
+Details: {
+  "domain": "test.co",
+  "addresses": [
+    {
+      "ip_address": "127.0.0.1",
+      "port": 3000,
+      "is_allowed": true
+    }
+  ],
+  "protocol": "http",
+  "auto_ssl": false,
+  "support_subdomains": false
+}
+2025-10-16 20:56:00 - caddy_manager - INFO - [test.co] CONFIG_UPDATE - SUCCESS
+Config file saved: config_20251016_205600.caddy
+2025-10-16 20:56:00 - caddy_manager - INFO - CADDY_RELOAD - SUCCESS (took 0.06s)
+Output: {"level":"info","ts":1760648160.6511292,"msg":"using config from file","file":"/etc/caddy/Caddyfile"}
+{"level":"info","ts":1760648160.651732,"msg":"adapted config to JSON","adapter":"caddyfile"}
+{"level":"warn","ts":1760648160.6517541,"msg":"Caddyfile input is not formatted; run 'caddy fmt --overwrite' to fix inconsistencies","adapter":"caddyfile","file":"/etc/caddy/Caddyfile","line":1}
+
+2025-10-16 20:56:00 - caddy_manager - INFO - [test.co] ADD_SITE_COMPLETE - SUCCESS
+Details: {
+  "domain": "test.co",
+  "addresses": [
+    {
+      "ip_address": "127.0.0.1",
+      "port": 3000,
+      "is_allowed": true
+    }
+  ],
+  "protocol": "http",
+  "auto_ssl": false,
+  "support_subdomains": false,
+  "ssl_strategy": {
+    "type": "none",
+    "reason": "HTTP protocol"
+  },
+  "reload_success": true,
+  "duration": 0.06646227836608887
+}
+2025-10-16 20:56:00 - caddy_manager - INFO - [ec2-16-171-255-15.eu-north-1.compute.amazonaws.com] ADD_SITE_START - SUCCESS
+Details: {
+  "domain": "ec2-16-171-255-15.eu-north-1.compute.amazonaws.com",
+  "addresses": [
+    {
+      "ip_address": "16.171.255.15",
+      "port": 80,
+      "is_allowed": true
+    }
+  ],
+  "protocol": "http",
+  "auto_ssl": false,
+  "support_subdomains": false
+}
+2025-10-16 20:56:00 - caddy_manager - INFO - [ec2-16-171-255-15.eu-north-1.compute.amazonaws.com] CONFIG_UPDATE - SUCCESS
+Config file saved: config_20251016_205600.caddy
+2025-10-16 20:56:00 - caddy_manager - INFO - CADDY_RELOAD - SUCCESS (took 0.07s)
+Output: {"level":"info","ts":1760648160.7256293,"msg":"using config from file","file":"/etc/caddy/Caddyfile"}
+{"level":"info","ts":1760648160.7259474,"msg":"adapted config to JSON","adapter":"caddyfile"}
+{"level":"warn","ts":1760648160.725954,"msg":"Caddyfile input is not formatted; run 'caddy fmt --overwrite' to fix inconsistencies","adapter":"caddyfile","file":"/etc/caddy/Caddyfile","line":1}
+
+2025-10-16 20:56:00 - caddy_manager - INFO - [ec2-16-171-255-15.eu-north-1.compute.amazonaws.com] ADD_SITE_COMPLETE - SUCCESS
+Details: {
+  "domain": "ec2-16-171-255-15.eu-north-1.compute.amazonaws.com",
+  "addresses": [
+    {
+      "ip_address": "16.171.255.15",
+      "port": 80,
+      "is_allowed": true
+    }
+  ],
+  "protocol": "http",
+  "auto_ssl": false,
+  "support_subdomains": false,
+  "ssl_strategy": {
+    "type": "none",
+    "reason": "HTTP protocol"
+  },
+  "reload_success": true,
+  "duration": 0.06998801231384277
+}

@@ -1,0 +1,676 @@
+{% extends "site_management/_base.html" %} {% block title %}{{ site.host }} -
+WAF Management{% endblock %} {% block content %}
+<div class="mb-6">
+    <div class="flex justify-between items-start mb-4">
+        <div>
+            <div class="flex items-center gap-3 mb-2">
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+                    {{ site.host }}
+                </h1>
+                <span
+                    class="px-2 py-1 text-xs font-medium rounded {% if site.status == 'active' %}bg-green-900 text-green-300{% else %}bg-red-900 text-red-300{% endif %}"
+                >
+                    {{ site.status|upper }}
+                </span>
+            </div>
+            <p class="text-gray-600 dark:text-gray-400">
+                Site configuration and monitoring
+            </p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <a
+                href="{% url 'analytics_dashboard_site' site.slug %}"
+                class="dark:text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:outline-none focus:ring-green-800 font-medium rounded-lg text-sm px-5 py-2.5"
+            >
+                View Analytics
+            </a>
+            <a
+                href="{% url 'rule_test' site.slug %}"
+                class="dark:text-white bg-purple-600 hover:bg-purple-700 focus:ring-4 focus:outline-none focus:ring-purple-800 font-medium rounded-lg text-sm px-5 py-2.5"
+            >
+                Test WAF Rules
+            </a>
+            <a
+                href="{% url 'ssl_upload' site.slug %}"
+                class="dark:text-white bg-orange-600 hover:bg-orange-700 focus:ring-4 focus:outline-none focus:ring-orange-800 font-medium rounded-lg text-sm px-5 py-2.5"
+            >
+                Manage SSL
+            </a>
+            <a
+                href="{% url 'caddy_config' site.slug %}"
+                class="dark:text-white bg-yellow-600 hover:bg-yellow-700 focus:ring-4 focus:outline-none focus:ring-yellow-800 font-medium rounded-lg text-sm px-5 py-2.5"
+            >
+                Caddy Config
+            </a>
+            <a
+                href="{% url 'site_edit' site.slug %}"
+                class="dark:text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-800 font-medium rounded-lg text-sm px-5 py-2.5"
+            >
+                Edit Site
+            </a>
+            <a
+                href="{% url 'sites_list' %}"
+                class="text-gray-400 hover: dark:text-white border border-gray-600 hover:bg-gray-700 focus:ring-4 focus:outline-none focus:ring-gray-800 font-medium rounded-lg text-sm px-5 py-2.5"
+            >
+                Back to Sites
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Caddy Management Section -->
+<div
+    class="mb-6 bg-gradient-to-r from-blue-900 to-indigo-900 border border-blue-800 rounded-lg p-6 shadow-lg"
+>
+    <div class="flex justify-between items-center mb-4">
+        <div class="flex items-center gap-3">
+            <svg
+                class="w-8 h-8 text-blue-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+            >
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"
+                ></path>
+            </svg>
+            <h2 class="text-xl font-semibold text-white">
+                Caddy Reverse Proxy
+            </h2>
+        </div>
+        <div class="flex gap-2">
+            <form
+                method="POST"
+                action="{% url 'sync_site_to_caddy' site.slug %}"
+                class="inline"
+            >
+                {% csrf_token %}
+                <button
+                    type="submit"
+                    class="text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:outline-none focus:ring-green-800 font-medium rounded-lg text-sm px-4 py-2 flex items-center gap-2"
+                >
+                    <svg
+                        class="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                        ></path>
+                    </svg>
+                    Sync to Caddy
+                </button>
+            </form>
+            <a
+                href="{% url 'site_ssl_status' site.slug %}"
+                class="text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-800 font-medium rounded-lg text-sm px-4 py-2 flex items-center gap-2"
+            >
+                <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                    ></path>
+                </svg>
+                SSL Status
+            </a>
+            <a
+                href="{% url 'caddy_config' site.slug %}"
+                class="text-blue-300 hover:text-blue-200 border border-blue-500 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-800 font-medium rounded-lg text-sm px-4 py-2 flex items-center gap-2"
+            >
+                <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                    ></path>
+                </svg>
+                View Config
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-blue-800 bg-opacity-50 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-blue-300 text-sm">Sync Status</span>
+                <svg
+                    class="w-5 h-5 text-blue-400"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                >
+                    <path
+                        fill-rule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clip-rule="evenodd"
+                    ></path>
+                </svg>
+            </div>
+            <p class="text-white font-semibold">Ready to Sync</p>
+            <p class="text-blue-300 text-xs mt-1">
+                Click "Sync to Caddy" to deploy
+            </p>
+        </div>
+
+        <div class="bg-blue-800 bg-opacity-50 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-blue-300 text-sm">SSL Configuration</span>
+                {% if site.protocol == 'https' %}
+                <svg
+                    class="w-5 h-5 text-green-400"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                >
+                    <path
+                        fill-rule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clip-rule="evenodd"
+                    ></path>
+                </svg>
+                {% else %}
+                <svg
+                    class="w-5 h-5 text-gray-400"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                >
+                    <path
+                        fill-rule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                        clip-rule="evenodd"
+                    ></path>
+                </svg>
+                {% endif %}
+            </div>
+            <p class="text-white font-semibold">{{ site.protocol|upper }}</p>
+            <p class="text-blue-300 text-xs mt-1">
+                {% if site.auto_ssl %} Auto SSL Enabled {% else %} Manual SSL
+                {%endif %}
+            </p>
+        </div>
+
+        <div class="bg-blue-800 bg-opacity-50 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-blue-300 text-sm">Deployment</span>
+                <svg
+                    class="w-5 h-5 text-purple-400"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                >
+                    <path
+                        d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"
+                    ></path>
+                </svg>
+            </div>
+            <p class="text-white font-semibold">
+                {{ site.get_status_display }}
+            </p>
+            <p class="text-blue-300 text-xs mt-1">
+                {% if site.status == 'active' %}Live on Caddy{% else %}Not
+                deployed{% endif %}
+            </p>
+        </div>
+    </div>
+
+    {% if site.protocol == 'https' and site.auto_ssl %}
+    <div
+        class="mt-4 bg-yellow-900 bg-opacity-30 border border-yellow-700 rounded-lg p-3 flex items-start gap-3"
+    >
+        <svg
+            class="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+        >
+            <path
+                fill-rule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                clip-rule="evenodd"
+            ></path>
+        </svg>
+        <div class="flex-1">
+            <p class="text-yellow-200 text-sm font-medium">Auto SSL Enabled</p>
+            <p class="text-yellow-300 text-xs mt-1">
+                Caddy will automatically obtain and renew SSL certificates from
+                Let's Encrypt. Ensure DNS is properly configured.
+            </p>
+        </div>
+        <a
+            href="{% url 'dns_challenge' site.slug %}"
+            class="text-yellow-300 hover:text-yellow-200 text-sm font-medium whitespace-nowrap"
+        >
+            DNS Challenge →
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Site Information -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <div
+        class="lg:col-span-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm"
+    >
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            Configuration
+        </h2>
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="text-sm text-gray-600 dark:text-gray-400"
+                    >Protocol</label
+                >
+                <p class="text-gray-900 dark:text-white font-medium">
+                    {{ site.protocol|upper }}
+                </p>
+            </div>
+            <div>
+                <label class="text-sm text-gray-600 dark:text-gray-400"
+                    >Auto SSL</label
+                >
+                <p class="text-gray-900 dark:text-white font-medium">
+                    {{ site.auto_ssl|yesno:"Enabled,Disabled" }}
+                </p>
+            </div>
+            <div>
+                <label class="text-sm text-gray-600 dark:text-gray-400"
+                    >Action Type</label
+                >
+                <p class="text-gray-900 dark:text-white font-medium">
+                    {{ site.get_action_type_display }}
+                </p>
+            </div>
+            <div>
+                <label class="text-sm text-gray-600 dark:text-gray-400"
+                    >Sensitivity Level</label
+                >
+                <p class="text-gray-900 dark:text-white font-medium">
+                    {{ site.get_sensitivity_level_display }}
+                </p>
+            </div>
+            <div>
+                <label class="text-sm text-gray-600 dark:text-gray-400"
+                    >WAF Template</label
+                >
+                <p class="text-gray-900 dark:text-white font-medium">
+                    {{ site.WafTemplate.name|default:"None" }}
+                </p>
+            </div>
+            <div>
+                <label class="text-sm text-gray-600 dark:text-gray-400"
+                    >Created</label
+                >
+                <p class="text-gray-900 dark:text-white font-medium">
+                    {{ site.created_at|date:"M d, Y H:i" }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm"
+    >
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            Quick Stats
+        </h2>
+        <div class="space-y-3">
+            <div class="flex justify-between items-center">
+                <span class="text-gray-600 dark:text-gray-400">Addresses</span>
+                <span class="text-2xl font-bold text-blue-400"
+                    >{{ addresses.count }}</span
+                >
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="text-gray-600 dark:text-gray-400"
+                    >Recent Logs</span
+                >
+                <span class="text-2xl font-bold text-green-400"
+                    >{{ recent_logs.count }}</span
+                >
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="text-gray-600 dark:text-gray-400"
+                    >Load Balancer</span
+                >
+                <span
+                    class="text-2xl font-bold {% if load_balancer %}text-green-400{% else %}text-gray-500{% endif %}"
+                >
+                    {% if load_balancer %}✓{% else %}✗{% endif %}
+                </span>
+            </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <h3
+                class="text-sm font-semibold text-gray-900 dark:text-white mb-2"
+            >
+                Quick Actions
+            </h3>
+            <div class="space-y-2">
+                <a
+                    href="{% url 'caddy_status' %}"
+                    class="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300"
+                >
+                    <svg
+                        class="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z"
+                        ></path>
+                    </svg>
+                    Caddy Dashboard
+                </a>
+                {% if site.protocol == 'https' %}
+                <a
+                    href="{% url 'dns_challenge' site.slug %}"
+                    class="flex items-center gap-2 text-sm text-purple-600 dark:text-purple-400 hover:text-purple-500 dark:hover:text-purple-300"
+                >
+                    <svg
+                        class="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
+                        ></path>
+                    </svg>
+                    DNS Challenge
+                </a>
+                {% endif %}
+                <a
+                    href="{% url 'export_caddy_logs' site.slug %}"
+                    class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+                >
+                    <svg
+                        class="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        ></path>
+                    </svg>
+                    Export Logs
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Load Balancer Section -->
+<div
+    class="mb-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm"
+>
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+            Load Balancer
+        </h2>
+        <div class="flex gap-2">
+            {% if load_balancer %}
+            <a
+                href="{% url 'load_balancer_add' site.slug %}"
+                class="text-blue-400 hover:text-blue-300 text-sm"
+                >Edit</a
+            >
+            <form
+                method="POST"
+                action="{% url 'load_balancer_delete' site.slug %}"
+                class="inline"
+                onsubmit="return confirm('Are you sure you want to delete the load balancer?');"
+            >
+                {% csrf_token %}
+                <button
+                    type="submit"
+                    class="text-red-400 hover:text-red-300 text-sm"
+                >
+                    Delete
+                </button>
+            </form>
+            {% else %}
+            <a
+                href="{% url 'load_balancer_add' site.slug %}"
+                class="text-blue-400 hover:text-blue-300 text-sm"
+                >Configure</a
+            >
+            {% endif %}
+        </div>
+    </div>
+    {% if load_balancer %}
+    <div class="grid grid-cols-2 gap-4">
+        <div>
+            <label class="text-sm text-gray-600 dark:text-gray-400"
+                >Algorithm</label
+            >
+            <p class="text-gray-900 dark:text-white font-medium">
+                {{ load_balancer.get_algorithm_display }}
+            </p>
+        </div>
+        <div>
+            <label class="text-sm text-gray-600 dark:text-gray-400"
+                >Health Check URL</label
+            >
+            <p class="text-gray-900 dark:text-white font-medium">
+                {{ load_balancer.health_check_url }}
+            </p>
+        </div>
+    </div>
+    {% else %}
+    <p class="text-gray-400">No load balancer configured for this site.</p>
+    {% endif %}
+</div>
+
+<!-- Addresses Section -->
+<div
+    class="mb-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm"
+>
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+            IP Addresses
+        </h2>
+        <a
+            href="{% url 'address_add' site.slug %}"
+            class="text-white dark:text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-800 font-medium rounded-lg text-sm px-4 py-2"
+        >
+            Add Address
+        </a>
+    </div>
+    {% if addresses %}
+    <div class="overflow-x-auto">
+        <table
+            class="w-full text-sm text-left text-gray-600 dark:text-gray-400"
+        >
+            <thead
+                class="text-xs uppercase bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
+            >
+                <tr>
+                    <th class="px-4 py-3">IP Address</th>
+                    <th class="px-4 py-3">Port</th>
+                    <th class="px-4 py-3">Type</th>
+                    <th class="px-4 py-3">Created</th>
+                    <th class="px-4 py-3 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for address in addresses %}
+                <tr
+                    class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                    <td
+                        class="px-4 py-3 font-mono text-gray-900 dark:text-white"
+                    >
+                        {{ address.ip_address }}
+                    </td>
+                    <td class="px-4 py-3 text-gray-900 dark:text-white">
+                        {{ address.port }}
+                    </td>
+                    <td class="px-4 py-3">
+                        <span
+                            class="px-2 py-1 text-xs font-medium rounded {% if address.is_allowed %}bg-green-900 text-green-300{% else %}bg-red-900 text-red-300{% endif %}"
+                        >
+                            {%if address.is_allowed%}Allowed
+                            {%else%}Blocked{%endif %}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3">
+                        {{ address.created_at|date:"M d, Y H:i" }}
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        <form
+                            method="POST"
+                            action="{% url 'address_delete' address.id %}"
+                            class="inline"
+                            onsubmit="return confirm('Are you sure you want to delete this address?');"
+                        >
+                            {% csrf_token %}
+                            <button
+                                type="submit"
+                                class="text-red-400 hover:text-red-300"
+                            >
+                                Delete
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-gray-600 dark:text-gray-400">
+        No addresses configured for this site.
+    </p>
+    {% endif %}
+</div>
+
+<!-- Recent Logs Section -->
+<div
+    class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm"
+>
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+            Recent Logs (Last 50)
+        </h2>
+        <div class="flex gap-2">
+            <a
+                href="{% url 'logs_list' %}?site={{ site.slug }}"
+                class="text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 text-sm"
+                >View All</a
+            >
+            {% if recent_logs %}
+            <form
+                method="POST"
+                action="{% url 'logs_clear' site.slug %}"
+                class="inline"
+                onsubmit="return confirm('Are you sure you want to clear all logs for this site?');"
+            >
+                {% csrf_token %}
+                <button
+                    type="submit"
+                    class="text-red-400 hover:text-red-300 text-sm"
+                >
+                    Clear All
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    {% if recent_logs %}
+    <div class="overflow-x-auto">
+        <table
+            class="w-full text-sm text-left text-gray-600 dark:text-gray-400"
+        >
+            <thead
+                class="text-xs uppercase bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
+            >
+                <tr>
+                    <th class="px-4 py-3">Timestamp</th>
+                    <th class="px-4 py-3">IP Address</th>
+                    <th class="px-4 py-3">Method</th>
+                    <th class="px-4 py-3">URL</th>
+                    <th class="px-4 py-3">Action</th>
+                    <th class="px-4 py-3 text-right">Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in recent_logs %}
+                <tr
+                    class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                    <td class="px-4 py-3 text-gray-900 dark:text-white">
+                        {{ log.timestamp|date:"M d, H:i:s" }}
+                    </td>
+                    <td
+                        class="px-4 py-3 font-mono text-gray-900 dark:text-white"
+                    >
+                        {{ log.ip_address }}
+                    </td>
+                    <td class="px-4 py-3">
+                        <span
+                            class="px-2 py-1 text-xs font-medium rounded bg-blue-900 text-blue-300"
+                        >
+                            {{ log.request_method }}
+                        </span>
+                    </td>
+                    <td
+                        class="px-4 py-3 truncate max-w-xs text-gray-900 dark:text-gray-300"
+                        title="{{ log.request_url }}"
+                    >
+                        {{ log.request_url }}
+                    </td>
+                    <td class="px-4 py-3">
+                        <span
+                            class="px-2 py-1 text-xs font-medium rounded {% if log.action_taken == 'blocked' %}bg-red-900 text-red-300{% else %}bg-green-900 text-green-300{% endif %}"
+                        >
+                            {{ log.get_action_taken_display }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        <a
+                            href="{% url 'log_detail' log.id %}"
+                            class="text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300"
+                            >View</a
+                        >
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% else %}
+    <p class="text-gray-600 dark:text-gray-400">
+        No logs recorded for this site yet.
+    </p>
+    {% endif %}
+</div>
+{% endblock %}
