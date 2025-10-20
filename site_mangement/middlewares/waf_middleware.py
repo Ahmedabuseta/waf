@@ -7,9 +7,9 @@ from django.utils import timezone
 from django.http import HttpResponseForbidden
 from django.utils.deprecation import MiddlewareMixin
 from django.template import loader
-from .models import Site, RequestAnalytics, Logs, BlockedIP
-from .utils import get_client_ip, geolocate_ip
-from .rules_engine import create_rule_engine, RuleAction, ThreatLevel
+from site_mangement.models import Site, RequestAnalytics, Logs, BlockedIP
+from site_mangement.utils.ip_utils import get_client_ip, geolocate_ip
+from site_mangement.rules_engine import create_rule_engine, RuleAction, ThreatLevel
 
 logger = logging.getLogger('waf.request')
 
@@ -18,35 +18,35 @@ class WAFMiddleware(MiddlewareMixin):
     """
     WAF Middleware with rule engine for threat detection and blocking
     """
-    
+
     def process_request(self, request):
         """Store request start time and evaluate WAF rules"""
         request._analytics_start_time = time.time()
         logger.info("phase=start path=%s method=%s", request.path, request.method)
-        
+
         # Skip for admin and static files
         if request.path.startswith('/admin/') or request.path.startswith('/static/'):
             logger.info("phase=skip reason=admin_or_static path=%s", request.path)
             return None
-        
+
         # Skip WAF blocking and analytics for authenticated users on management paths
         # Still collect analytics, but don't block legitimate admin actions
-        if request.user.is_authenticated and (
-            request.path.startswith('/sites/') or 
-            request.path.startswith('/templates/') or
-            request.path.startswith('/logs/') or
-            request.path.startswith('/analytics/')
-        ):
-            # Mark as management request (analytics only, no blocking)
-            request._waf_management = True
-            logger.info("phase=management_request user=%s path=%s", getattr(request.user, 'username', None), request.path)
-        
+        # if request.user.is_authenticated and (
+        #     request.path.startswith('/sites/') or
+        #     request.path.startswith('/templates/') or
+        #     request.path.startswith('/logs/') or
+        #     request.path.startswith('/analytics/')
+        # ):
+        #     # Mark as management request (analytics only, no blocking)
+        #     request._waf_management = True
+        #     logger.info("phase=management_request user=%s path=%s", getattr(request.user, 'username', None), request.path)
+
         # Get site configuration
         site = self._get_site(request)
         if not site:
             logger.info("phase=no_site_config host=%s path=%s", request.get_host(), request.path)
             return None
-        
+
         # Enforce timed IP blocks
         client_ip = get_client_ip(request)
         try:
@@ -68,16 +68,16 @@ class WAFMiddleware(MiddlewareMixin):
 
         request._waf_site = site
         logger.info("phase=site_loaded host=%s action_type=%s sensitivity=%s", site.host, site.action_type, site.sensitivity_level)
-        
+
         # Prepare request data for rule engine
         request_data = self._prepare_request_data(request)
-        
+
         # Create rule engine based on site's WAF template
         rule_engine = create_rule_engine(site.WafTemplate)
-        
+
         # Evaluate request
         action, match = rule_engine.evaluate(request_data)
-        
+
         # Store evaluation result
         request._waf_action = action
         request._waf_match = match
@@ -90,43 +90,43 @@ class WAFMiddleware(MiddlewareMixin):
             getattr(match, 'threat_level', None).value if match else None,
             getattr(match, 'details', None),
         )
-        
+
         # Block if action is BLOCK and site action_type is 'block'
         is_management = getattr(request, '_waf_management', False)
         if action == RuleAction.BLOCK and site.action_type == 'block' and not is_management:
             logger.info("phase=block_response reason=policy path=%s", request.path)
             return self._block_request(request, site, match)
-        
+
         logger.info("phase=allow_response path=%s", request.path)
         return None
-    
+
     def process_response(self, request, response):
         """Capture analytics and log the request"""
         # Skip for admin, static files, API endpoints, and management UI
-        if (
-            request.path.startswith('/admin/') or 
-            request.path.startswith('/static/') or 
-            request.path.startswith('/api/') or 
-            getattr(request, '_waf_management', False)
-        ):
-            return response
-        
+        # if (
+        #     request.path.startswith('/admin/') or
+        #     request.path.startswith('/static/') or
+        #     request.path.startswith('/api/') or
+        #     getattr(request, '_waf_management', False)
+        # ):
+        #     return response
+
         try:
             site = getattr(request, '_waf_site', None)
             if not site:
                 return response
-            
+
             # Calculate response time
             start_time = getattr(request, '_analytics_start_time', None)
             response_time = (time.time() - start_time) * 1000 if start_time else 0
-            
+
             # Get client IP
             ip_address = get_client_ip(request)
-            
+
             # Get WAF evaluation results
             action = getattr(request, '_waf_action', RuleAction.ALLOW)
             match = getattr(request, '_waf_match', None)
-            
+
             # Determine action taken and threat level
             if match:
                 action_taken = 'blocked' if action == RuleAction.BLOCK and site.action_type == 'block' else 'logged'
@@ -138,10 +138,10 @@ class WAFMiddleware(MiddlewareMixin):
                 threat_level = 'none'
                 threat_type = None
                 details = None
-            
+
             # Geolocate IP
             geo_data = geolocate_ip(ip_address)
-            
+
             # Create analytics record
             RequestAnalytics.objects.create(
                 site=site,
@@ -171,7 +171,7 @@ class WAFMiddleware(MiddlewareMixin):
                 action_taken,
                 threat_level,
             )
-            
+
             # Create log entry if blocked or threat detected
             if match:
                 Logs.objects.create(
@@ -183,13 +183,13 @@ class WAFMiddleware(MiddlewareMixin):
                     details=details,
                 )
                 logger.info("phase=security_log_saved action_taken=%s details=%s", action_taken, details)
-        
+
         except Exception as e:
             # Log error but don't break the request
             logger.exception("phase=error error=%s", e)
-        
+
         return response
-    
+
     def _get_site(self, request):
         """Get site based on request host"""
         # Try to match by hostname
@@ -199,19 +199,19 @@ class WAFMiddleware(MiddlewareMixin):
         except Site.DoesNotExist:
             # No fallback: avoid mis-attributing requests to wrong site
             return None
-    
+
     def _prepare_request_data(self, request):
         """Prepare request data for rule engine evaluation"""
         # Get query parameters
         params = dict(request.GET.items())
-        
+
         # Get headers
         headers = {
             key.replace('HTTP_', '').replace('_', '-'): value
             for key, value in request.META.items()
             if key.startswith('HTTP_')
         }
-        
+
         # Get body (for POST requests)
         # For management requests, only scan user input fields, not CSRF tokens
         body = ''
@@ -233,7 +233,7 @@ class WAFMiddleware(MiddlewareMixin):
                         body = '&'.join(filtered)
                 except:
                     body = ''
-        
+
         return {
             'url': request.build_absolute_uri(),
             'path': request.path,
@@ -242,7 +242,7 @@ class WAFMiddleware(MiddlewareMixin):
             'params': params,
             'body': body,
         }
-    
+
     def _block_request(self, request, site, match):
         """Block the request and return 403 response"""
         context = {
@@ -253,10 +253,9 @@ class WAFMiddleware(MiddlewareMixin):
             'details': match.details,
         }
         logger.info("phase=render_block_page rule=%s path=%s", match.rule_name, request.path)
-        
+
         # Use custom template or default
         template = loader.get_template('waf/blocked.html')
         content = template.render(context, request)
-        
-        return HttpResponseForbidden(content)
 
+        return HttpResponseForbidden(content)
