@@ -45,7 +45,25 @@ INSTALLED_APPS = [
 ]
 COMPRESS_ROOT = BASE_DIR / 'waf_app/static/'
 COMPRESS_ENABLED = True
-STATICFILES_FINDERS = ('compressor.finders.CompressorFinder',)
+
+# Compressor settings for CSS
+COMPRESS_CSS_FILTERS = [
+    'compressor.filters.css_default.CssAbsoluteFilter',
+    'compressor.filters.cssmin.rCSSMinFilter',
+]
+
+# Compressor settings for JS
+COMPRESS_JS_FILTERS = [
+    'compressor.filters.jsmin.rJSMinFilter',
+]
+
+# Compressor offline settings
+COMPRESS_OFFLINE = False  # Set to True for production
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+    'compressor.finders.CompressorFinder',
+]
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -55,8 +73,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 
-    'site_mangement.middlewares.middlewares.waf_middleware.WAFMiddleware',  # WAF with rule engine
-    'site_mangement.middlewares.middlewares.proxy_middleware.ProxyMiddleware',  # Uncomment to enable proxy forwarding
+    'site_mangement.middlewares.waf_middleware.WAFMiddleware',  # WAF with rule engine
+    'site_mangement.middlewares.proxy_middleware.ProxyMiddleware',  # Uncomment to enable proxy forwarding
      # New custom middleware
     'site_mangement.middlewares.request_id_middleware.RequestIDMiddleware',
     'site_mangement.middlewares.rate_limiting_middleware.RateLimitMiddleware',
@@ -133,6 +151,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [
+    BASE_DIR / 'waf_app/static',
+]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

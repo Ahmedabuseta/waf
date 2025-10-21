@@ -4,7 +4,7 @@ Implements rate limiting per IP address with configurable limits
 """
 import time
 from collections import defaultdict, deque
-from django.http import HttpResponseTooManyRequests, JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.core.cache import cache
 from django.conf import settings
 import logging
@@ -92,9 +92,10 @@ class RateLimitMiddleware:
                 'message': 'Too many requests. Please try again later.'
             }, status=429)
         else:
-            return HttpResponseTooManyRequests(
+            return HttpResponse(
                 content="<h1>429 - Too Many Requests</h1><p>Rate limit exceeded. Please try again later.</p>",
-                content_type="text/html"
+                content_type="text/html",
+                status=429
             )
     
     def _add_rate_limit_headers(self, response, client_ip, rate_limit_type):
@@ -138,7 +139,7 @@ def rate_limit_middleware(get_response):
         
         # Check rate limit
         if len(client_requests) >= config['requests']:
-            return HttpResponseTooManyRequests("Rate limit exceeded")
+            return HttpResponse("Rate limit exceeded", status=429)
         
         # Record request
         client_requests.append(now)

@@ -11,7 +11,7 @@ import time
 import hashlib
 import logging
 
-from .models import Site, Addresses, LoadBalancers
+from site_mangement.models import Site, Addresses, LoadBalancers
 
 
 class ProxyMiddleware(MiddlewareMixin):
