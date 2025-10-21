@@ -192,12 +192,12 @@ class EnhancedCaddyManager:
                 errors.extend(validation_errors)
 
             # Validate addresses
-            if not config.addresses:
-                errors.append("No backend addresses configured")
+            # if not config.addresses:
+            #     errors.append("No backend addresses configured")
 
-            for addr in config.addresses:
-                if 'ip_address' not in addr or 'port' not in addr:
-                    errors.append(f"Invalid address configuration: {addr}")
+            # for addr in config.addresses:
+            #     if 'ip_address' not in addr or 'port' not in addr:
+            #         errors.append(f"Invalid address configuration: {addr}")
 
             # Check DNS challenge requirements
             if config.auto_ssl and config.support_subdomains:
@@ -232,7 +232,7 @@ class EnhancedCaddyManager:
         start_time = time.time()
         operation_details = {
             "domain": config.host,
-            "addresses": config.addresses,
+            # "addresses": config.addresses,
             "protocol": config.protocol,
             "auto_ssl": config.auto_ssl,
             "support_subdomains": config.support_subdomains
@@ -708,40 +708,40 @@ class EnhancedCaddyManager:
 
         # Reverse proxy configuration
         lines.append("")
-        if len(config.addresses) == 1:
-            addr = config.addresses[0]
-            lines.extend([
-                "    # Single upstream",
-                f"    reverse_proxy {addr['ip_address']}:{addr['port']} {{"
-            ])
-        else:
-            lines.extend([
-                "    # Load balanced upstreams",
-                f"    reverse_proxy {{"
-            ])
+        # if len(config.addresses) == 1:
+        #     addr = config.addresses[0]
+        #     lines.extend([
+        #         "    # Single upstream",
+        #         f"    reverse_proxy {addr['ip_address']}:{addr['port']} {{"
+        #     ])
+        # else:
+        #     lines.extend([
+        #         "    # Load balanced upstreams",
+        #         f"    reverse_proxy {{"
+        #     ])
 
-            # Add load balancing policy
-            lines.append(f"        lb_policy {config.load_balancer_algorithm}")
+        #     # Add load balancing policy
+        #     lines.append(f"        lb_policy {config.load_balancer_algorithm}")
 
             # Add upstream servers
-            for addr in config.addresses:
-                lines.append(f"        to {addr['ip_address']}:{addr['port']}")
+
+        lines.append(f"reverse_proxy 127.0.0.1:8000")
 
         # Health checks
-        lines.extend([
-            "",
-            "        # Health checks",
-            f"        health_uri {config.health_check_path}",
-            f"        health_interval {config.health_check_interval}",
-            f"        health_timeout {config.health_check_timeout}"
-        ])
+        # lines.extend([
+        #     "",
+        #     "        # Health checks",
+        #     f"        health_uri {config.health_check_path}",
+        #     f"        health_interval {config.health_check_interval}",
+        #     f"        health_timeout {config.health_check_timeout}"
+        # ])
 
         # Trusted proxies
-        if config.trusted_proxies:
-            lines.append("")
-            lines.append("        # Trusted proxies")
-            for proxy in config.trusted_proxies:
-                lines.append(f"        trusted_proxies {proxy}")
+        # if config.trusted_proxies:
+        #     lines.append("")
+        #     lines.append("        # Trusted proxies")
+        #     for proxy in config.trusted_proxies:
+        #         lines.append(f"        trusted_proxies {proxy}")
 
         # Header pass-through
         lines.extend([
@@ -777,9 +777,6 @@ class EnhancedCaddyManager:
                 else:
                     lines.extend([
                         "    # Automatic SSL (Let's Encrypt)",
-                        "    tls {",
-                        "        # HTTP-01 challenge will be used",
-                        "    }"
                     ])
             else:
                 lines.append("    # No SSL configured")

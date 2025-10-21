@@ -220,7 +220,7 @@ class Site(models.Model):
         """
         if not self.dns_challenge_created_at:
             return True
-        
+
         from django.utils import timezone
         from datetime import timedelta
         return timezone.now() > self.dns_challenge_created_at + timedelta(hours=hours)

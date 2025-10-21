@@ -1,5 +1,5 @@
 from django.urls import path
-from site_mangement import views, views_rules, views_caddy, views_auth
+from site_mangement import views, views_sites, views_analtics, views_rules, views_caddy, views_auth, views_logs
 
 urlpatterns = [
     # Home
@@ -11,41 +11,41 @@ urlpatterns = [
     path('logout/', views_auth.logout_view, name='logout'),
 
     # Analytics Dashboard
-    path('analytics/', views.analytics_dashboard, name='analytics_dashboard'),
-    path('analytics/<slug:site_slug>/', views.analytics_dashboard, name='analytics_dashboard_site'),
+    path('analytics/', views_analtics.analytics_dashboard, name='analytics_dashboard'),
+    path('analytics/<slug:site_slug>/', views_analtics.analytics_dashboard, name='analytics_dashboard_site'),
 
     # API Endpoints for Analytics Data
-    path('api/analytics/<slug:site_slug>/geographic/', views.api_geographic_data, name='api_geographic_data'),
-    path('api/analytics/<slug:site_slug>/table/', views.api_geographic_table, name='api_geographic_table'),
-    path('api/analytics/<slug:site_slug>/timeline/', views.api_timeline_data, name='api_timeline_data'),
-    path('api/analytics/<slug:site_slug>/top-ips/', views.api_top_ips, name='api_top_ips'),
-    path('api/analytics/<slug:site_slug>/methods/', views.api_request_methods, name='api_request_methods'),
+    path('api/analytics/<slug:site_slug>/geographic/', views_analtics.api_geographic_data, name='api_geographic_data'),
+    path('api/analytics/<slug:site_slug>/table/', views_analtics.api_geographic_table, name='api_geographic_table'),
+    path('api/analytics/<slug:site_slug>/timeline/', views_analtics.api_timeline_data, name='api_timeline_data'),
+    path('api/analytics/<slug:site_slug>/top-ips/', views_analtics.api_top_ips, name='api_top_ips'),
+    path('api/analytics/<slug:site_slug>/methods/', views_analtics.api_request_methods, name='api_request_methods'),
 
     # IP Blacklist Actions
-    path('api/analytics/<slug:site_slug>/blacklist/', views.blacklist_ip, name='blacklist_ip'),
-    path('api/analytics/<slug:site_slug>/unblacklist/', views.remove_from_blacklist, name='remove_from_blacklist'),
+    path('api/analytics/<slug:site_slug>/blacklist/', views_analtics.blacklist_ip, name='blacklist_ip'),
+    path('api/analytics/<slug:site_slug>/unblacklist/', views_analtics.remove_from_blacklist, name='remove_from_blacklist'),
 
     # Export Functions
-    path('analytics/<slug:site_slug>/export/csv/', views.export_analytics_csv, name='export_csv'),
-    path('analytics/<slug:site_slug>/export/json/', views.export_analytics_json, name='export_json'),
+    path('analytics/<slug:site_slug>/export/csv/', views_analtics.export_analytics_csv, name='export_csv'),
+    path('analytics/<slug:site_slug>/export/json/', views_analtics.export_analytics_json, name='export_json'),
 
     # Site Management
-    path('sites/', views.sites_list, name='sites_list'),
-    path('sites/add/', views.site_add, name='site_add'),
-    path('sites/add/enhanced/', views.site_add, name='site_add_enhanced'),
+    path('sites/', views_sites.sites_list, name='sites_list'),
+    path('sites/add/', views_sites.site_add, name='site_add'),
+    path('sites/add/enhanced/', views_sites.site_add, name='site_add_enhanced'),
     # Caddy bulk sync must be BEFORE the catch-all site slug route to avoid conflicts
     path('sites/sync-all-caddy/', views_caddy.sync_all_sites, name='sync_all_sites'),
-    path('sites/<slug:slug>/', views.site_detail, name='site_detail'),
-    path('sites/<slug:slug>/edit/', views.site_edit, name='site_edit'),
-    path('sites/<slug:slug>/delete/', views.site_delete, name='site_delete'),
+    path('sites/<slug:slug>/', views_sites.site_detail, name='site_detail'),
+    path('sites/<slug:slug>/edit/', views_sites.site_edit, name='site_edit'),
+    path('sites/<slug:slug>/delete/', views_sites.site_delete, name='site_delete'),
 
     # Address Management
-    path('sites/<slug:site_slug>/addresses/add/', views.address_add, name='address_add'),
-    path('addresses/<int:address_id>/delete/', views.address_delete, name='address_delete'),
+    path('sites/<slug:site_slug>/addresses/add/', views_sites.address_add, name='address_add'),
+    path('addresses/<int:address_id>/delete/', views_sites.address_delete, name='address_delete'),
 
     # Load Balancer Management
-    path('sites/<slug:site_slug>/load-balancer/', views.load_balancer_add, name='load_balancer_add'),
-    path('sites/<slug:site_slug>/load-balancer/delete/', views.load_balancer_delete, name='load_balancer_delete'),
+    path('sites/<slug:site_slug>/load-balancer/', views_sites.load_balancer_add, name='load_balancer_add'),
+    path('sites/<slug:site_slug>/load-balancer/delete/', views_sites.load_balancer_delete, name='load_balancer_delete'),
 
     # WAF Template Management
     path('waf-templates/', views.waf_templates_list, name='waf_templates_list'),
@@ -55,9 +55,9 @@ urlpatterns = [
     path('waf-templates/<int:template_id>/delete/', views.waf_template_delete, name='waf_template_delete'),
 
     # Logs Management
-    path('logs/', views.logs_list, name='logs_list'),
-    path('logs/<int:log_id>/', views.log_detail, name='log_detail'),
-    path('logs/<slug:site_slug>/clear/', views.logs_clear, name='logs_clear'),
+    path('logs/', views_logs.logs_list, name='logs_list'),
+    path('logs/<int:log_id>/', views_logs.log_detail, name='log_detail'),
+    path('logs/<slug:site_slug>/clear/', views_logs.logs_clear, name='logs_clear'),
 
     # WAF Rules Management
     path('sites/<slug:site_slug>/rules/test/', views_rules.rule_test_page, name='rule_test'),

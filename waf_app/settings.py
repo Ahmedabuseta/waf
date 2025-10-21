@@ -54,8 +54,16 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'site_mangement.waf_middleware.WAFMiddleware',  # WAF with rule engine
-    'site_mangement.proxy_middleware.ProxyMiddleware',  # Uncomment to enable proxy forwarding
+
+    'site_mangement.middlewares.middlewares.waf_middleware.WAFMiddleware',  # WAF with rule engine
+    'site_mangement.middlewares.middlewares.proxy_middleware.ProxyMiddleware',  # Uncomment to enable proxy forwarding
+     # New custom middleware
+    'site_mangement.middlewares.request_id_middleware.RequestIDMiddleware',
+    'site_mangement.middlewares.rate_limiting_middleware.RateLimitMiddleware',
+    'site_mangement.middlewares.request_logging_middleware.RequestLoggingMiddleware',
+
+     # Security headers last
+     'site_mangement.middlewares.security_headers_middleware.SecurityHeadersMiddleware',
 ]
 
 DJANGO_SETTINGS_MODULE='waf_app.settings_dev'

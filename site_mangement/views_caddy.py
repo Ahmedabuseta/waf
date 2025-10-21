@@ -453,8 +453,34 @@ def dns_challenge_page(request, site_slug):
                     domain=site.host,
                     expected_value=verify_value
                 )
+                
+                # If DNS verification is successful, generate wildcard certificate
+                if verification_result.get('exists') and verification_result.get('matched'):
+                    messages.success(request, 'DNS verification successful! Generating wildcard certificate...')
+                    
+                    # Generate wildcard certificate using enhanced caddy manager
+                    from site_mangement.utils.enhanced_caddy_manager import EnhancedCaddyManager
+                    caddy_manager = EnhancedCaddyManager()
+                    
+                    # Get email from site or use default
+                    email = getattr(site, 'ssl_email', 'admin@example.com')
+                    
+                    cert_result = caddy_manager.generate_wildcard_certificate_after_dns_verification(
+                        domain=site.host,
+                        email=email,
+                        staging=False  # Set to True for testing
+                    )
+                    
+                    if cert_result.get('success'):
+                        messages.success(request, f'Wildcard certificate generated successfully! Certificate: {cert_result.get("cert_path")}')
+                        # Update site status to indicate SSL is now active
+                        site.ssl_status = 'active'
+                        site.save()
+                    else:
+                        messages.error(request, f'Failed to generate certificate: {cert_result.get("error")}')
             else:
                 messages.warning(request, 'No challenge value provided for verification')
+        
         elif action == 'check_propagation':
             # Use stored challenge value if no value provided
             check_value = expected_value if expected_value else site.dns_challenge_value
@@ -720,5 +746,37 @@ def validate_all_certificates(request):
     }
 
     return render(request, 'site_management/certificate_validation.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def generate_certificate_after_dns_verification_api(request):
+    """
+    API endpoint to generate wildcard certificate after DNS verification
+    """
+    try:
+        data = json.loads(request.body)
+        domain = data.get('domain')
+        email = data.get('email', 'admin@example.com')
+        staging = data.get('staging', False)
+
+        if not domain:
+            return JsonResponse({'error': 'Domain is required'}, status=400)
+
+        # Import enhanced caddy manager
+        from site_mangement.utils.enhanced_caddy_manager import EnhancedCaddyManager
+        caddy_manager = EnhancedCaddyManager()
+        
+        # Generate wildcard certificate
+        result = caddy_manager.generate_wildcard_certificate_after_dns_verification(
+            domain=domain,
+            email=email,
+            staging=staging
+        )
+        
+        return JsonResponse(result)
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 
