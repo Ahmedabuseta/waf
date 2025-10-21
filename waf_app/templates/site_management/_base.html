@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}WAF Management{% endblock %}</title>
     
+    <!-- CSRF Token for JavaScript -->
+    <meta name="csrf-token" content="{% csrf_token %}">
+    
     <!-- Tailwind CSS with Dark Mode Configuration -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -16,6 +19,35 @@
     
     <!-- Flowbite -->
     <link href="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.css" rel="stylesheet" />
+    
+    <!-- CSRF Utility Script -->
+    <script>
+        // CSRF token utility functions
+        window.csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        
+        // Function to get CSRF token
+        function getCSRFToken() {
+            return window.csrfToken || document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+        }
+        
+        // Function to setup CSRF token for fetch requests
+        function setupCSRFHeaders(headers = {}) {
+            const token = getCSRFToken();
+            if (token) {
+                headers['X-CSRFToken'] = token;
+            }
+            return headers;
+        }
+        
+        // Function to setup CSRF token for form data
+        function setupCSRFData(data = {}) {
+            const token = getCSRFToken();
+            if (token) {
+                data.csrfmiddlewaretoken = token;
+            }
+            return data;
+        }
+    </script>
     
     <style>
         /* Ensure dark mode is always on by default */

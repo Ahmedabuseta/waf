@@ -83,7 +83,7 @@ class Site(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    slug = models.SlugField(max_length=255, unique=True)
+    slug = models.SlugField(max_length=255, unique=True, blank=True)
 
     # DNS Challenge fields for wildcard certificates
     dns_challenge_key = models.CharField(

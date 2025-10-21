@@ -54,8 +54,19 @@ def site_pre_save_handler(sender, instance, **kwargs):
     """
     # Auto-generate slug from host
     if not instance.slug:
-        base_slug = instance.host.replace('http://', '').replace('https://', '').replace('/', '-').replace('.', '-')
+        from django.utils.text import slugify
+        # Clean the host name
+        clean_host = instance.host.replace('http://', '').replace('https://', '').split('/')[0]
+        # Generate slug using Django's slugify
+        base_slug = slugify(clean_host)
         instance.slug = base_slug
+        
+        # Ensure uniqueness by appending a number if needed
+        counter = 1
+        original_slug = instance.slug
+        while Site.objects.filter(slug=instance.slug).exclude(pk=instance.pk).exists():
+            instance.slug = f"{original_slug}-{counter}"
+            counter += 1
         
     # Mark that pre_save ran for this instance (used for ordering verification)
     try:

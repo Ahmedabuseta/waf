@@ -1,0 +1,95 @@
+{% extends "site_management/_base.html" %}
+
+{% block title %}CSRF Error - WAF Management{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
+        <div class="flex items-center mb-4">
+            <svg class="w-8 h-8 text-red-600 dark:text-red-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+            </svg>
+            <h1 class="text-2xl font-bold text-red-800 dark:text-red-200">CSRF Verification Failed</h1>
+        </div>
+        
+        <div class="mb-4">
+            <p class="text-red-700 dark:text-red-300 mb-2">
+                <strong>Reason:</strong> {{ reason|default:"Unknown" }}
+            </p>
+            <p class="text-red-600 dark:text-red-400">
+                This error occurs when Django's CSRF protection prevents a potentially malicious request. 
+                This is a security feature to protect against Cross-Site Request Forgery attacks.
+            </p>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 border border-red-200 dark:border-red-700 rounded-lg p-4 mb-4">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Common Solutions:</h2>
+            <ul class="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                <li class="flex items-start">
+                    <span class="text-red-500 mr-2">•</span>
+                    <span>Make sure your browser is accepting cookies</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="text-red-500 mr-2">•</span>
+                    <span>Refresh the page and try again</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="text-red-500 mr-2">•</span>
+                    <span>Make sure the form contains a <code>{% csrf_token %}</code> tag</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="text-red-500 mr-2">•</span>
+                    <span>Don't submit forms from bookmarked URLs</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="text-red-500 mr-2">•</span>
+                    <span>Clear your browser cache and cookies if the problem persists</span>
+                </li>
+            </ul>
+        </div>
+        
+        {% if debug_info %}
+        <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Debug Information:</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                    <strong class="text-gray-700 dark:text-gray-300">User:</strong>
+                    <span class="text-gray-600 dark:text-gray-400">{{ debug_info.user }}</span>
+                </div>
+                <div>
+                    <strong class="text-gray-700 dark:text-gray-300">Session Key:</strong>
+                    <span class="text-gray-600 dark:text-gray-400">{{ debug_info.session_key|default:"No session" }}</span>
+                </div>
+                <div>
+                    <strong class="text-gray-700 dark:text-gray-300">Method:</strong>
+                    <span class="text-gray-600 dark:text-gray-400">{{ debug_info.method }}</span>
+                </div>
+                <div>
+                    <strong class="text-gray-700 dark:text-gray-300">Path:</strong>
+                    <span class="text-gray-600 dark:text-gray-400">{{ debug_info.path }}</span>
+                </div>
+                <div class="md:col-span-2">
+                    <strong class="text-gray-700 dark:text-gray-300">Referer:</strong>
+                    <span class="text-gray-600 dark:text-gray-400">{{ debug_info.referer }}</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="mt-6 flex space-x-4">
+            <a href="javascript:history.back()" 
+               class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500">
+                Go Back
+            </a>
+            <a href="{% url 'index' %}" 
+               class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                Go Home
+            </a>
+            <a href="{% url 'csrf_test_page' %}" 
+               class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                Test CSRF
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

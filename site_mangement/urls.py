@@ -4,6 +4,10 @@ from site_mangement import views, views_sites, views_analtics, views_rules, view
 urlpatterns = [
     # Home
     path('', views.index, name='index'),
+    
+    # CSRF Test (for debugging)
+    path('csrf-test/', views.csrf_test, name='csrf_test'),
+    path('csrf-test-page/', views.csrf_test_page, name='csrf_test_page'),
 
     # Authentication
     path('login/', views_auth.login_view, name='login'),

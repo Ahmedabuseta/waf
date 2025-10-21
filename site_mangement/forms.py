@@ -83,13 +83,17 @@ class SiteForm(forms.ModelForm):
     class Meta:
         model = Site
         fields = [
-            'host', 'protocol', 'auto_ssl', 'support_subdomains',
+            'host', 'slug', 'protocol', 'auto_ssl', 'support_subdomains',
             'action_type', 'sensitivity_level', 'status', 'WafTemplate'
         ]
         widgets = {
             'host': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'example.com'
+            }),
+            'slug': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'auto-generated-from-host'
             }),
             'protocol': forms.Select(attrs={
                 'class': 'form-control',
@@ -115,6 +119,8 @@ class SiteForm(forms.ModelForm):
         self.dns_challenge_info = None
 
         # Add helpful text for fields
+        self.fields['host'].help_text = 'Domain or IP address of the site (e.g., example.com)'
+        self.fields['slug'].help_text = 'URL-friendly identifier (auto-generated from host if left blank)'
         self.fields['protocol'].help_text = 'Select HTTP or HTTPS'
         self.fields['auto_ssl'].help_text = 'Enable automatic SSL certificate management via Let\'s Encrypt'
         self.fields['support_subdomains'].help_text = 'Enable wildcard certificate for subdomains (*.example.com)'

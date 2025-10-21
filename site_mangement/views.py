@@ -5,6 +5,8 @@ from django.contrib import messages
 from django.db.models import Count, Sum, Avg, Q
 from django.utils import timezone
 from django.utils.text import slugify
+from django.views.decorators.csrf import csrf_exempt
+from django.middleware.csrf import get_token
 from datetime import timedelta
 import csv
 import json
@@ -751,3 +753,52 @@ def logs_clear(request, site_slug):
     site.logs.all().delete()
     messages.success(request, f'Cleared {count} logs for site {site.host}')
     return redirect('logs_list')
+
+
+def csrf_test(request):
+    """CSRF test view for debugging"""
+    if request.method == 'POST':
+        return JsonResponse({
+            'status': 'success',
+            'message': 'CSRF token is working correctly',
+            'csrf_token': request.POST.get('csrfmiddlewaretoken', 'Not found')
+        })
+    
+    # GET request - return CSRF token
+    csrf_token = get_token(request)
+    return JsonResponse({
+        'csrf_token': csrf_token,
+        'message': 'Use this token in your POST request'
+    })
+
+
+def csrf_test_page(request):
+    """CSRF test page for debugging"""
+    return render(request, 'site_management/csrf_test.html')
+
+
+def csrf_failure_view(request, reason=""):
+    """Custom CSRF failure view with better debugging information"""
+    from django.http import HttpResponseForbidden
+    from django.template import loader
+    
+    # Get debugging information
+    debug_info = {
+        'reason': reason,
+        'user': request.user.username if request.user.is_authenticated else 'Anonymous',
+        'session_key': request.session.session_key,
+        'csrf_cookie': request.META.get('HTTP_COOKIE', 'No cookies'),
+        'referer': request.META.get('HTTP_REFERER', 'No referer'),
+        'user_agent': request.META.get('HTTP_USER_AGENT', 'No user agent'),
+        'method': request.method,
+        'path': request.path,
+    }
+    
+    # Create a custom error page
+    template = loader.get_template('site_management/csrf_error.html')
+    context = {
+        'debug_info': debug_info,
+        'reason': reason,
+    }
+    
+    return HttpResponseForbidden(template.render(context, request))

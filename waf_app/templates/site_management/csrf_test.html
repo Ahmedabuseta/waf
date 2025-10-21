@@ -1,0 +1,89 @@
+{% extends "site_management/_base.html" %}
+
+{% block title %}CSRF Test - WAF Management{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-6">CSRF Test</h1>
+    
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Test CSRF Protection</h2>
+        
+        <!-- Test Form 1: Basic POST -->
+        <div class="mb-6">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Test 1: Basic POST Form</h3>
+            <form method="POST" action="{% url 'csrf_test' %}" class="space-y-4">
+                {% csrf_token %}
+                <div>
+                    <label for="test_input" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Test Input
+                    </label>
+                    <input type="text" id="test_input" name="test_input" 
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                           placeholder="Enter some text">
+                </div>
+                <button type="submit" 
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    Test CSRF
+                </button>
+            </form>
+        </div>
+        
+        <!-- Test Form 2: AJAX POST -->
+        <div class="mb-6">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Test 2: AJAX POST</h3>
+            <button id="ajax-test-btn" 
+                    class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                Test AJAX CSRF
+            </button>
+            <div id="ajax-result" class="mt-2 p-2 bg-gray-100 dark:bg-gray-700 rounded hidden"></div>
+        </div>
+        
+        <!-- CSRF Token Display -->
+        <div class="mb-6">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Current CSRF Token</h3>
+            <div class="bg-gray-100 dark:bg-gray-700 p-3 rounded font-mono text-sm break-all">
+                {% csrf_token %}
+            </div>
+        </div>
+        
+        <!-- Debug Information -->
+        <div class="mb-6">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Debug Information</h3>
+            <div class="bg-gray-100 dark:bg-gray-700 p-3 rounded text-sm">
+                <p><strong>User:</strong> {{ user.username|default:"Anonymous" }}</p>
+                <p><strong>Session Key:</strong> {{ request.session.session_key|default:"No session" }}</p>
+                <p><strong>CSRF Cookie:</strong> {{ request.META.HTTP_COOKIE|default:"No cookies" }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('ajax-test-btn').addEventListener('click', function() {
+    const resultDiv = document.getElementById('ajax-result');
+    resultDiv.classList.remove('hidden');
+    resultDiv.innerHTML = 'Testing...';
+    
+    // Use the utility functions
+    const formData = new URLSearchParams(setupCSRFData({
+        test_input: 'ajax_test'
+    }));
+    
+    fetch('{% url "csrf_test" %}', {
+        method: 'POST',
+        headers: setupCSRFHeaders({
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }),
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        resultDiv.innerHTML = '<div class="text-green-600">✓ ' + data.message + '</div>';
+    })
+    .catch(error => {
+        resultDiv.innerHTML = '<div class="text-red-600">✗ Error: ' + error.message + '</div>';
+    });
+});
+</script>
+{% endblock %}

@@ -26,6 +26,28 @@ SECRET_KEY = 'django-insecure-tj^my76st+(5t*b4h*g+f)t4ci(7w-hd8$7-yf1f@_a28&17^b
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+# CSRF Debugging (only for development)
+if DEBUG:
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'handlers': {
+            'console': {
+                'class': 'logging.StreamHandler',
+            },
+        },
+        'loggers': {
+            'django.security.DisallowedHost': {
+                'handlers': ['console'],
+                'level': 'DEBUG',
+            },
+            'django.request': {
+                'handlers': ['console'],
+                'level': 'DEBUG',
+            },
+        },
+    }
+
 ALLOWED_HOSTS = ["*"]
 
 
@@ -59,6 +81,18 @@ COMPRESS_JS_FILTERS = [
 
 # Compressor offline settings
 COMPRESS_OFFLINE = False  # Set to True for production
+
+# CSRF Configuration
+CSRF_COOKIE_SECURE = False  # Set to True in production with HTTPS
+CSRF_COOKIE_HTTPONLY = False  # Set to True for better security
+CSRF_COOKIE_SAMESITE = 'Lax'  # Lax, Strict, or None
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'http://0.0.0.0:8000',
+]
+CSRF_USE_SESSIONS = False  # Use cookies by default
+CSRF_FAILURE_VIEW = 'site_mangement.views.csrf_failure_view'
 STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
@@ -83,6 +117,10 @@ MIDDLEWARE = [
      # Security headers last
      'site_mangement.middlewares.security_headers_middleware.SecurityHeadersMiddleware',
 ]
+
+# Add CSRF debug middleware in DEBUG mode
+if DEBUG:
+    MIDDLEWARE.insert(-1, 'site_mangement.middlewares.csrf_debug_middleware.CSRFDebugMiddleware')
 
 DJANGO_SETTINGS_MODULE='waf_app.settings_dev'
 ROOT_URLCONF = 'waf_app.urls'
