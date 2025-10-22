@@ -304,7 +304,7 @@
               </tr>
             </thead>
             <tbody>
-              {% for log in recent_logs</tbody> %}
+                {% for log in recent_logs %}
                 <tr class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
                   <td class="px-4 py-2 text-gray-900 dark:text-white">{{ log.timestamp|date:"M d, H:i:s" }}</td>
                   <td class="px-4 py-2 font-mono break-words text-gray-900 dark:text-white">{{ log.ip_address }}</td>
