@@ -1,106 +1,113 @@
-{% extends "site_management/_base.html" %} {% load static %} {% block title %}Analytics Dashboard - WAF Management{% endblock %} {% block extra_js %}
+{% extends "site_management/_base.html" %} {% load static %} {% block title%}Analytics Dashboard - WAF Management{% endblock %} {% block extra_js %}
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<!-- D3.js for Datamaps -->
-<script src="https://d3js.org/d3.v7.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/datamaps@0.5.9/dist/datamaps.world.min.js"></script>
+<!-- Leaflet CSS for Map -->
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
 
 <style>
-    #map-container {
-        position: relative;
-        width: 100%;
-        height: 500px;
-        background: transparent;
-    }
-    .datamap {
-        width: 100% !important;
-        height: 100% !important;
-    }
-    .datamaps-legend {
-        position: absolute;
-        bottom: 10px;
-        left: 10px;
-        background: rgba(31, 41, 55, 0.95);
-        padding: 10px;
-        border-radius: 8px;
-        border: 1px solid #374151;
-        font-size: 12px;
-        color: #e5e7eb;
-        z-index: 1000;
-    }
-    .datamaps-legend dt {
-        float: left;
-        clear: left;
-        width: 80px;
-        margin-bottom: 5px;
-    }
-    .datamaps-legend dd {
-        float: left;
-        margin-left: 10px;
-        margin-bottom: 5px;
-    }
-    .datamaps-hoverover {
-        position: absolute;
-        background: rgba(31, 41, 55, 0.98);
-        color: #e5e7eb;
-        padding: 12px 16px;
-        border-radius: 8px;
-        border: 1px solid #4b5563;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-        pointer-events: none;
-        z-index: 10000;
-        font-size: 13px;
-        line-height: 1.6;
-    }
-    .datamaps-hoverover strong {
-        color: #60a5fa;
-        font-size: 14px;
-    }
     #map {
-        height: 600px !important;
-        width: 100% !important;
+        height: 600px;
         border-radius: 0.5rem;
         border: 2px solid #e5e7eb;
         background-color: #ffffff;
         position: relative;
-        display: block !important;
     }
     .dark #map {
         border-color: #4b5563;
         background-color: #1f2937;
     }
-    .country-layer {
-        stroke: #d1d5db;
-        stroke-width: 1;
-        stroke-opacity: 0.8;
+
+    /* Map Legend */
+    .map-legend {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+        font-size: 12px;
     }
-    .dark .country-layer {
-        stroke: #1f2937;
+    .dark .map-legend {
+        background: #1f2937;
+        border: 1px solid #374151;
     }
-    .country-layer:hover {
-        stroke: #2563eb;
-        stroke-width: 2;
+    .legend-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
     }
-    .country-marker {
-        cursor: pointer;
-        transition: all 0.3s ease;
+    .legend-item:last-child {
+        margin-bottom: 0;
     }
-    .country-marker:hover {
-        transform: scale(1.1);
+    .legend-color {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        margin-right: 8px;
+        border: 2px solid rgba(255, 255, 255, 0.5);
     }
-    .custom-tooltip {
-        background: rgba(255, 255, 255, 0.98) !important;
-        color: #111827 !important;
+    .legend-label {
+        color: #374151;
+        font-weight: 500;
+    }
+    .dark .legend-label {
+        color: #e5e7eb;
+    }
+
+    /* Custom Leaflet Tooltip */
+    .leaflet-tooltip {
+        background-color: rgba(255, 255, 255, 0.95) !important;
         border: 1px solid #e5e7eb !important;
-        border-radius: 0.5rem !important;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+        border-radius: 8px !important;
+        padding: 12px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
     }
-    .dark .custom-tooltip {
-        background: rgba(31, 41, 55, 0.95) !important;
-        color: #ffffff !important;
+    .dark .leaflet-tooltip {
+        background-color: rgba(31, 41, 55, 0.95) !important;
         border-color: #4b5563 !important;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
+    }
+
+    /* Marker Pulse Animation */
+    @keyframes pulse {
+        0% {
+            opacity: 1;
+            transform: scale(1);
+        }
+        50% {
+            opacity: 0.7;
+            transform: scale(1.1);
+        }
+        100% {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+    .marker-pulse {
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    /* Map Stats Overlay */
+    .map-stats {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        background: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+        font-size: 13px;
+    }
+    .dark .map-stats {
+        background: #1f2937;
+        border: 1px solid #374151;
+        color: #e5e7eb;
     }
 </style>
 {% endblock %} {% block content %}
@@ -142,7 +149,13 @@
             {% for site in sites %}
             <option
                 value="{{ site.slug }}"
-                {% if site == "current_site" %} selected {%endif%}
+                {%
+                if
+                site=""
+                ="current_site"
+                %}selected{%
+                endif
+                %}
             >
                 {{ site.host }}
             </option>
@@ -284,8 +297,725 @@
                 class="w-5 h-5 text-green-500"
                 fill="currentColor"
                 viewBox="0 0 20 20"
-            ></svg>
+            >
+                <path
+                    fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z"
+                    clip-rule="evenodd"
+                ></path>
+            </svg>
+        </div>
+        <p class="text-3xl font-bold text-gray-900 dark:text-white">
+            {{ unique_countries|default:"0" }}
+        </p>
+    </div>
+
+    <!-- Unique IPs -->
+    <div
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow"
+    >
+        <div class="flex items-center justify-between mb-2">
+            <h5 class="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Unique IPs
+            </h5>
+            <svg
+                class="w-5 h-5 text-yellow-500"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+            >
+                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path>
+                <path
+                    fill-rule="evenodd"
+                    d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+                    clip-rule="evenodd"
+                ></path>
+            </svg>
+        </div>
+        <p class="text-3xl font-bold text-gray-900 dark:text-white">
+            {{ unique_ips|default:"0" }}
+        </p>
+    </div>
+
+    <!-- Avg Response Time -->
+    <div
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow"
+    >
+        <div class="flex items-center justify-between mb-2">
+            <h5 class="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Avg Response
+            </h5>
+            <svg
+                class="w-5 h-5 text-purple-500"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+            >
+                <path
+                    fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                    clip-rule="evenodd"
+                ></path>
+            </svg>
+        </div>
+        <p class="text-3xl font-bold text-gray-900 dark:text-white">
+            {{ avg_response_time|default:"0" }}
+        </p>
+        <p class="text-sm text-gray-600 dark:text-gray-400">ms</p>
+    </div>
+</div>
+
+<!-- Threat Alerts -->
+{% if recent_alerts %}
+<div
+    class="mb-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 shadow-sm"
+>
+    <h3
+        class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center"
+    >
+        <svg
+            class="w-5 h-5 mr-2 text-red-500"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+        >
+            <path
+                fill-rule="evenodd"
+                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                clip-rule="evenodd"
+            ></path>
+        </svg>
+        Active Threat Alerts
+    </h3>
+    <div class="space-y-2">
+        {% for alert in recent_alerts %}
+        <div
+            class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+        >
+            <div class="flex items-center gap-3">
+                <span
+                    class="px-2 py-1 text-xs font-medium rounded {% if alert.severity == 'critical' %}bg-red-900 text-red-300{% elif alert.severity == 'high' %}bg-orange-900 text-orange-300{% else %}bg-yellow-900 text-yellow-300{% endif %}"
+                >
+                    {{ alert.severity|upper }}
+                </span>
+                <span class="text-gray-900 dark:text-white"
+                    >{{ alert.get_alert_type_display }}</span
+                >
+                {% if alert.ip_address %}
+                <span class="text-gray-600 dark:text-gray-400"
+                    >{{ alert.ip_address }}</span
+                >
+                {% endif %} {% if alert.country_code %}
+                <span class="text-gray-600 dark:text-gray-400"
+                    >{{ alert.country_code }}</span
+                >
+                {% endif %}
+            </div>
+            <span class="text-sm text-gray-600 dark:text-gray-400"
+                >{{ alert.timestamp|timesince }} ago</span
+            >
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Main Content: Map and Geographic Table -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <!-- Map -->
+    <div
+        class="lg:col-span-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 shadow-sm"
+    >
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                Geographic Distribution
+            </h3>
+            <div class="flex gap-2">
+                <button
+                    id="resetMapView"
+                    class="text-xs px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-gray-700 dark:text-gray-300"
+                    style="display: none"
+                >
+                    Reset View
+                </button>
+                <button
+                    id="toggleHeatmap"
+                    class="text-xs px-3 py-1 bg-blue-100 dark:bg-blue-900 hover:bg-blue-200 dark:hover:bg-blue-800 rounded-lg text-blue-700 dark:text-blue-300"
+                    style="display: none"
+                >
+                    Toggle Heat
+                </button>
+            </div>
+        </div>
+        <div style="position: relative">
+            <div id="map">
+                <div
+                    id="mapLoader"
+                    class="flex items-center justify-center"
+                    style="height: 600px; background: #f3f4f6"
+                >
+                    <div class="text-center">
+                        <svg
+                            class="animate-spin h-12 w-12 text-blue-600 mx-auto mb-4"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                        >
+                            <circle
+                                class="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                stroke-width="4"
+                            ></circle>
+                            <path
+                                class="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                        </svg>
+                        <p class="text-gray-600 dark:text-gray-400">
+                            Loading map...
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="map-stats">
+                <div class="font-semibold text-gray-900 dark:text-white mb-1">
+                    Active Locations
+                </div>
+                <div
+                    class="text-2xl font-bold text-blue-600 dark:text-blue-400"
+                    id="mapLocationCount"
+                >
+                    0
+                </div>
+            </div>
+            <div class="map-legend">
+                <div class="font-semibold text-gray-900 dark:text-white mb-2">
+                    Threat Level
+                </div>
+                <div class="legend-item">
+                    <div
+                        class="legend-color"
+                        style="background-color: #10b981; border-color: #10b981"
+                    ></div>
+                    <span class="legend-label">Low</span>
+                </div>
+                <div class="legend-item">
+                    <div
+                        class="legend-color"
+                        style="background-color: #f97316; border-color: #f97316"
+                    ></div>
+                    <span class="legend-label">High</span>
+                </div>
+                <div class="legend-item">
+                    <div
+                        class="legend-color"
+                        style="background-color: #ef4444; border-color: #ef4444"
+                    ></div>
+                    <span class="legend-label">Critical</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Geographic Breakdown Table -->
+    <div
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 shadow-sm"
+    >
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Top Locations
+        </h3>
+        <div class="overflow-auto" style="max-height: 500px">
+            <table
+                id="geo-table"
+                class="w-full text-sm text-left text-gray-500 dark:text-gray-400"
+            >
+                <thead
+                    class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 sticky top-0"
+                >
+                    <tr>
+                        <th class="px-3 py-2">Location</th>
+                        <th class="px-3 py-2 text-right">Requests</th>
+                        <th class="px-3 py-2 text-right">Blocked</th>
+                    </tr>
+                </thead>
+                <tbody id="geo-table-body">
+                    <tr>
+                        <td colspan="3" class="px-3 py-4 text-center">
+                            Loading...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
+
+<!-- Timeline Chart -->
+<div
+    class="mb-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 shadow-sm"
+>
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        Requests Over Time
+    </h3>
+    <canvas id="timeline-chart" height="80"></canvas>
+</div>
+
+<!-- Bottom Row: Top IPs and Request Methods -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Top IPs -->
+    <div
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 shadow-sm"
+    >
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Top Requesting IPs
+        </h3>
+        <div class="overflow-auto" style="max-height: 400px">
+            <table
+                id="top-ips-table"
+                class="w-full text-sm text-left text-gray-500 dark:text-gray-400"
+            >
+                <thead
+                    class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 sticky top-0"
+                >
+                    <tr>
+                        <th class="px-3 py-2">IP Address</th>
+                        <th class="px-3 py-2">Country</th>
+                        <th class="px-3 py-2 text-right">Requests</th>
+                        <th class="px-3 py-2 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="top-ips-body">
+                    <tr>
+                        <td colspan="4" class="px-3 py-4 text-center">
+                            Loading...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Request Methods -->
+    <div
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 shadow-sm"
+    >
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Request Methods
+        </h3>
+        <canvas id="methods-chart"></canvas>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    // Get current site slug
+    const currentSite = "{{ current_site.slug }}";
+    const days = {{ days }};
+
+    // Site and time range selectors
+    document.getElementById('site-selector').addEventListener('change', function() {
+        window.location.href = '/analytics/' + this.value + '/?days=' + days;
+    });
+
+    document.getElementById('time-range').addEventListener('change', function() {
+        window.location.href = '/analytics/' + currentSite + '/?days=' + this.value;
+    });
+
+    // Store markers for management
+    let markers = [];
+    let map = null;
+    let mapInitialized = false;
+
+    // Lazy load map when it becomes visible
+    function initializeMap() {
+        if (mapInitialized) return;
+        mapInitialized = true;
+
+        // Remove loader
+        const loader = document.getElementById('mapLoader');
+        if (loader) loader.remove();
+
+        // Initialize Leaflet Map with better settings
+        map = L.map('map', {
+            center: [20, 0],
+            zoom: 2,
+            minZoom: 2,
+            maxZoom: 10,
+            maxBounds: [[-90, -180], [90, 180]],
+            zoomControl: true,
+            attributionControl: true,
+            preferCanvas: true  // Use Canvas for better performance
+        });
+
+        // Add tile layer (switches based on dark mode if available)
+        const isDarkMode = document.documentElement.classList.contains('dark');
+        const tileUrl = isDarkMode
+            ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+            : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+
+        L.tileLayer(tileUrl, {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+            maxZoom: 19,
+            subdomains: 'abcd',
+            updateWhenIdle: true,
+            updateWhenZooming: false,
+            keepBuffer: 2
+        }).addTo(map);
+
+        // Show control buttons
+        document.getElementById('resetMapView').style.display = 'block';
+        document.getElementById('toggleHeatmap').style.display = 'block';
+
+        // Load geographic data
+        loadMapData();
+    }
+
+    // Load map data with progressive rendering
+    function loadMapData() {
+        fetch(`/api/analytics/${currentSite}/geographic/?days=${days}`)
+            .then(response => response.json())
+            .then(data => {
+                // Update location count
+                document.getElementById('mapLocationCount').textContent = data.data.length;
+
+                // Batch render markers for better performance
+                const batchSize = 50;
+                let currentIndex = 0;
+
+                function renderBatch() {
+                    const endIndex = Math.min(currentIndex + batchSize, data.data.length);
+
+                    for (let i = currentIndex; i < endIndex; i++) {
+                        const location = data.data[i];
+                        createMarker(location);
+                    }
+
+                    currentIndex = endIndex;
+
+                    if (currentIndex < data.data.length) {
+                        requestAnimationFrame(renderBatch);
+                    } else {
+                        // All markers loaded, fit bounds
+                        if (markers.length > 0) {
+                            const group = L.featureGroup(markers);
+                            map.fitBounds(group.getBounds().pad(0.1));
+                        }
+                    }
+                }
+
+                renderBatch();
+            })
+            .catch(error => {
+                console.error('Error loading geographic data:', error);
+                document.getElementById('mapLocationCount').textContent = 'Error';
+            });
+    }
+
+    // Create individual marker (extracted for performance)
+    function createMarker(location) {
+        // Determine color based on threat level
+        const color = location.threat_level === 'critical' ? '#ef4444' :
+                      location.threat_level === 'high' ? '#f97316' : '#10b981';
+
+        // Calculate radius based on request volume (scaled logarithmically)
+        const baseRadius = Math.log(location.total_requests + 1) * 3;
+        const radius = Math.min(Math.max(baseRadius, 6), 35);
+
+        // Create circle marker with enhanced styling
+        const circle = L.circleMarker([location.lat, location.lng], {
+            radius: radius,
+            fillColor: color,
+            color: '#ffffff',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.7,
+            className: location.threat_level === 'critical' ? 'marker-pulse' : ''
+        }).addTo(map);
+
+        // Enhanced tooltip with better formatting
+        const blockedPercent = location.total_requests > 0
+            ? ((location.blocked / location.total_requests) * 100).toFixed(1)
+            : 0;
+
+        circle.bindTooltip(`
+                    <div style="min-width: 200px;">
+                        <div style="font-size: 14px; font-weight: 600; color: ${color}; margin-bottom: 8px; border-bottom: 2px solid ${color}; padding-bottom: 4px;">
+                            ${location.country} (${location.country_code})
+                        </div>
+                        ${location.city ? `<div style="font-size: 11px; color: #6b7280; margin-bottom: 8px;">${location.city}</div>` : ''}
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
+                            <div>
+                                <div style="color: #6b7280; font-size: 10px;">Total Requests</div>
+                                <div style="font-weight: 600; color: #3b82f6;">${location.total_requests.toLocaleString()}</div>
+                            </div>
+                            <div>
+                                <div style="color: #6b7280; font-size: 10px;">Blocked Rate</div>
+                                <div style="font-weight: 600; color: #ef4444;">${blockedPercent}%</div>
+                            </div>
+                            <div>
+                                <div style="color: #6b7280; font-size: 10px;">Blocked</div>
+                                <div style="font-weight: 600; color: #dc2626;">${location.blocked.toLocaleString()}</div>
+                            </div>
+                            <div>
+                                <div style="color: #6b7280; font-size: 10px;">Allowed</div>
+                                <div style="font-weight: 600; color: #10b981;">${location.allowed.toLocaleString()}</div>
+                            </div>
+                        </div>
+                        ${location.critical_threats > 0 ? `
+                            <div style="margin-top: 8px; padding: 6px; background: #fef2f2; border-left: 3px solid #ef4444; border-radius: 4px;">
+                                <span style="color: #991b1b; font-weight: 600; font-size: 11px;">⚠️ ${location.critical_threats} Critical Threats</span>
+                            </div>
+                        ` : ''}
+                        ${location.high_threats > 0 ? `
+                            <div style="margin-top: 4px; padding: 6px; background: #fff7ed; border-left: 3px solid #f97316; border-radius: 4px;">
+                                <span style="color: #9a3412; font-weight: 600; font-size: 11px;">⚡ ${location.high_threats} High Threats</span>
+                            </div>
+                        ` : ''}
+                    </div>
+        `, {
+            permanent: false,
+            direction: 'top',
+            offset: [0, -10],
+            className: 'custom-tooltip'
+        });
+
+        // Add click event for zoom
+        circle.on('click', function() {
+            map.setView([location.lat, location.lng], 5, {
+                animate: true,
+                duration: 1
+            });
+        });
+
+        // Add hover effects
+        circle.on('mouseover', function() {
+            this.setStyle({
+                fillOpacity: 0.9,
+                weight: 3
+            });
+        });
+
+        circle.on('mouseout', function() {
+            this.setStyle({
+                fillOpacity: 0.7,
+                weight: 2
+            });
+        });
+
+        markers.push(circle);
+    }
+
+    // Initialize map on page load
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeMap);
+    } else {
+        // Use setTimeout to defer map initialization
+        setTimeout(initializeMap, 100);
+    }
+
+    // Reset map view button
+    document.getElementById('resetMapView').addEventListener('click', function() {
+        if (map) {
+            map.setView([20, 0], 2, {
+                animate: true,
+                duration: 1
+            });
+        }
+    });
+
+    // Toggle heatmap effect (simplified - changes marker opacity)
+    let heatmapActive = false;
+    document.getElementById('toggleHeatmap').addEventListener('click', function() {
+        if (!map) return;
+        heatmapActive = !heatmapActive;
+        markers.forEach(marker => {
+            marker.setStyle({
+                fillOpacity: heatmapActive ? 0.9 : 0.7,
+                opacity: heatmapActive ? 1 : 1
+            });
+        });
+        this.textContent = heatmapActive ? 'Normal View' : 'Toggle Heat';
+    });
+
+    // Load geographic table
+    fetch(`/api/analytics/${currentSite}/table/?days=${days}`)
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.getElementById('geo-table-body');
+            tbody.innerHTML = '';
+            data.data.forEach(row => {
+                tbody.innerHTML += `
+                    <tr class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td class="px-3 py-2">
+                            <div class="font-medium text-gray-900 dark:text-white">${row.country}</div>
+                            <div class="text-xs text-gray-600 dark:text-gray-400">${row.city}</div>
+                        </td>
+                        <td class="px-3 py-2 text-right text-gray-900 dark:text-white">${row.total_requests}</td>
+                        <td class="px-3 py-2 text-right ${row.blocked > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}">${row.blocked}</td>
+                    </tr>
+                `;
+            });
+        });
+
+    // Timeline Chart
+    fetch(`/api/analytics/${currentSite}/timeline/?days=${days}`)
+        .then(response => response.json())
+        .then(data => {
+            const ctx = document.getElementById('timeline-chart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [
+                        {
+                            label: 'Total',
+                            data: data.total,
+                            borderColor: 'rgb(59, 130, 246)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Blocked',
+                            data: data.blocked,
+                            borderColor: 'rgb(239, 68, 68)',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Allowed',
+                            data: data.allowed,
+                            borderColor: 'rgb(34, 197, 94)',
+                            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                            tension: 0.3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            labels: { color: 'rgb(107, 114, 128)' }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            ticks: { color: 'rgb(107, 114, 128)' },
+                            grid: { color: 'rgba(229, 231, 235, 0.3)' }
+                        },
+                        x: {
+                            ticks: { color: 'rgb(107, 114, 128)' },
+                            grid: { color: 'rgba(229, 231, 235, 0.3)' }
+                        }
+                    }
+                }
+            });
+        });
+
+    // Top IPs Table
+    fetch(`/api/analytics/${currentSite}/top-ips/?days=${days}`)
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.getElementById('top-ips-body');
+            tbody.innerHTML = '';
+            data.data.forEach(row => {
+                tbody.innerHTML += `
+                    <tr class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td class="px-3 py-2 text-gray-900 dark:text-white font-mono">${row.ip}</td>
+                        <td class="px-3 py-2 text-gray-600 dark:text-gray-400">${row.country}</td>
+                        <td class="px-3 py-2 text-right text-gray-900 dark:text-white">${row.requests}</td>
+                        <td class="px-3 py-2 text-center">
+                            ${row.is_blacklisted ?
+                                `<button onclick="removeFromBlacklist('${row.ip}')" class="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 text-xs">Unblock</button>` :
+                                `<button onclick="blacklistIP('${row.ip}')" class="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xs">Block</button>`
+                            }
+                        </td>
+                    </tr>
+                `;
+            });
+        });
+
+    // Request Methods Pie Chart
+    fetch(`/api/analytics/${currentSite}/methods/?days=${days}`)
+        .then(response => response.json())
+        .then(data => {
+            const ctx = document.getElementById('methods-chart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        data: data.values,
+                        backgroundColor: [
+                            'rgb(59, 130, 246)',
+                            'rgb(34, 197, 94)',
+                            'rgb(234, 179, 8)',
+                            'rgb(239, 68, 68)',
+                            'rgb(168, 85, 247)',
+                            'rgb(236, 72, 153)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: 'rgb(107, 114, 128)' }
+                        }
+                    }
+                }
+            });
+        });
+
+    // Blacklist IP function
+    function blacklistIP(ip) {
+        if (!confirm(`Are you sure you want to blacklist IP ${ip}?`)) return;
+
+        fetch(`/api/analytics/${currentSite}/blacklist/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ ip_address: ip })
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+            location.reload();
+        })
+        .catch(error => {
+            alert('Error blacklisting IP');
+            console.error(error);
+        });
+    }
+
+    // Remove from blacklist function
+    function removeFromBlacklist(ip) {
+        if (!confirm(`Are you sure you want to remove IP ${ip} from blacklist?`)) return;
+
+        fetch(`/api/analytics/${currentSite}/unblacklist/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ ip_address: ip })
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+            location.reload();
+        })
+        .catch(error => {
+            alert('Error removing IP from blacklist');
+            console.error(error);
+        });
+    }
+</script>
 {% endblock %}
