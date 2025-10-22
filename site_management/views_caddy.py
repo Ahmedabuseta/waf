@@ -463,7 +463,7 @@ def dns_challenge_page(request, site_slug):
                     caddy_manager = CertificateManager()
 
                     # Get email from site or use default
-                    email = getattr(site, 'ssl_email', 'admin@example.com')
+                    email = getattr(site, 'ssl_email', 'ahmed.a.abuseta@gmail.com')
 
                     cert_result = caddy_manager.generate_wildcard_certificate_acme(
                         domain=site.host,
