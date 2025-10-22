@@ -160,16 +160,16 @@
             id="time-range"
             class="bg-white border border-gray-300 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5"
         >
-            <option value="1" {% if days=="1" %}selected{% endif %}>
+            <option value="1" {% if days="" ="1" %}selected{% endif %}>
                 Last 24 Hours
             </option>
-            <option value="7" {% if days=="7" %}selected{% endif %}>
+            <option value="7" {% if days="" ="7" %}selected{% endif %}>
                 Last 7 Days
             </option>
-            <option value="30" {% if days=="30" %}selected{% endif %}>
+            <option value="30" {% if days="" ="30" %}selected{% endif %}>
                 Last 30 Days
             </option>
-            <option value="90" {% if days=="90" %}selected{% endif %}>
+            <option value="90" {% if days="" ="90" %}selected{% endif %}>
                 Last 90 Days
             </option>
         </select>
@@ -290,9 +290,8 @@
                 class="w-5 h-5 text-green-500"
                 fill="currentColor"
                 viewBox="0 0 20 20"
-            >
-                {% endblock %}
-            </svg>
+            ></svg>
         </div>
     </div>
 </div>
+{% endblock %}

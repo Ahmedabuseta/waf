@@ -569,9 +569,7 @@ class EnhancedCaddyManager:
             config.ssl_cert_path = strategy["cert_path"]
             config.ssl_key_path = strategy["key_path"]
             config.auto_ssl = False
-        elif strategy_type in ["auto_wildcard"]:
-            config.auto_ssl = False
-        elif strategy_type in ["auto_single"]:
+        elif strategy_type in ["auto_single","auto_wildcard"]:
             config.auto_ssl = True
         elif strategy_type == "none":
             config.auto_ssl = False
