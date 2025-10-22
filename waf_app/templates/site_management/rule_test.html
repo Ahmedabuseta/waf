@@ -157,7 +157,11 @@ const v = "script"
       const payload = payloads[type];
       document.getElementById('testUrl').value = payload.url;
       document.getElementById('testMethod').value = payload.method;
-      document.getElementById('testBody').value = payload.body;
+      // Convert body object to JSON string if it's an object
+      const bodyValue = typeof payload.body === 'object' && payload.body !== null
+          ? JSON.stringify(payload.body, null, 2)
+          : payload.body;
+      document.getElementById('testBody').value = bodyValue;
   }
 
   document.getElementById('testForm').addEventListener('submit', async (e) => {
@@ -165,7 +169,18 @@ const v = "script"
 
       const url = document.getElementById('testUrl').value;
       const method = document.getElementById('testMethod').value;
-      const body = document.getElementById('testBody').value;
+      let body = document.getElementById('testBody').value;
+
+      // Try to parse body as JSON if it's not empty
+      let parsedBody = body;
+      if (body && body.trim()) {
+          try {
+              parsedBody = JSON.parse(body);
+          } catch (e) {
+              // If it's not valid JSON, use as string
+              parsedBody = body;
+          }
+      }
 
       // Parse URL to get path and params
       let path = '/';
@@ -185,7 +200,7 @@ const v = "script"
           path: path,
           method: method,
           params: params,
-          body: body,
+          body: parsedBody,
           headers: {}
       };
 

@@ -56,7 +56,7 @@ class ProxyMiddleware(MiddlewareMixin):
         site = getattr(request, '_waf_site', None)
         if not site:
             site = self._get_site(request)
-
+        print(site)
         if not site or site.status != 'active':
             self.logger.info("=== PROXY NO-SITE === proxy_phase=no_site path=%s host=%s", request.path, request.get_host())
             return None

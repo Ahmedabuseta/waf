@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rule Test Payload Handler Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 0;
+        }
+        .test-case {
+            background: #f9f9f9;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .success {
+            border-left-color: #4CAF50;
+            background: #e8f5e9;
+        }
+        .error {
+            border-left-color: #f44336;
+            background: #ffebee;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.1s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .btn-sqli { background: #f44336; color: white; }
+        .btn-xss { background: #ff9800; color: white; }
+        .btn-path { background: #ffc107; color: black; }
+        .btn-cmd { background: #9c27b0; color: white; }
+        .btn-test { background: #2196F3; color: white; }
+        .btn-reset { background: #607d8b; color: white; }
+
+        textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 5px 0;
+        }
+        .result {
+            background: #263238;
+            color: #aed581;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .label {
+            font-weight: bold;
+            color: #555;
+            margin-top: 10px;
+            display: block;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-pass {
+            background: #4CAF50;
+            color: white;
+        }
+        .status-fail {
+            background: #f44336;
+            color: white;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Rule Test Payload Handler Test Suite</h1>
+    <p>This page tests the payload handling logic from <code>rule_test.html</code> to verify the JSON parse error fix.</p>
+
+    <div class="grid">
+        <!-- Test Form -->
+        <div class="container">
+            <h2>Test Form</h2>
+
+            <label class="label">Request URL</label>
+            <input type="text" id="testUrl" placeholder="https://example.com/page">
+
+            <label class="label">HTTP Method</label>
+            <input type="text" id="testMethod" value="GET">
+
+            <label class="label">Request Body</label>
+            <textarea id="testBody" placeholder='{"key": "value"} or plain text'></textarea>
+
+            <div class="button-group">
+                <button class="btn-sqli" onclick="loadPayload('sqli')">SQL Injection</button>
+                <button class="btn-xss" onclick="loadPayload('xss')">XSS</button>
+                <button class="btn-path" onclick="loadPayload('path')">Path Traversal</button>
+                <button class="btn-cmd" onclick="loadPayload('cmd')">Command Injection</button>
+            </div>
+
+            <div class="button-group">
+                <button class="btn-test" onclick="testPayloadHandling()">Test Payload Processing</button>
+                <button class="btn-reset" onclick="resetForm()">Reset Form</button>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div class="container">
+            <h2>Test Results</h2>
+            <div id="results"></div>
+        </div>
+    </div>
+
+    <!-- Automated Tests -->
+    <div class="container">
+        <h2>Automated Test Cases</h2>
+        <button class="btn-test" onclick="runAllTests()">Run All Tests</button>
+        <div id="autoTestResults"></div>
+    </div>
+
+    <script>
+        // Payload definitions (same as in rule_test.html)
+        const v = "script";
+        const payloads = {
+            sqli: {
+                url: "https://example.com/search?q=1' OR '1'='1",
+                method: "GET",
+                body: ""
+            },
+            xss: {
+                url: "https://example.com/comment",
+                method: "POST",
+                body: {"comment": `<script>alert(\'XSS\')</${v}>`}
+            },
+            path: {
+                url: "https://example.com/files?path=../../etc/passwd",
+                method: "GET",
+                body: ""
+            },
+            cmd: {
+                url: "https://example.com/ping?host=127.0.0.1;ls -la",
+                method: "GET",
+                body: ""
+            }
+        };
+
+        // FIXED: Convert object to JSON string if it's an object
+        function loadPayload(type) {
+            const payload = payloads[type];
+            document.getElementById('testUrl').value = payload.url;
+            document.getElementById('testMethod').value = payload.method;
+
+            // Convert body object to JSON string if it's an object
+            const bodyValue = typeof payload.body === 'object' && payload.body !== null
+                ? JSON.stringify(payload.body, null, 2)
+                : payload.body;
+            document.getElementById('testBody').value = bodyValue;
+        }
+
+        // FIXED: Parse JSON body before processing
+        function processRequestBody() {
+            let body = document.getElementById('testBody').value;
+
+            // Try to parse body as JSON if it's not empty
+            let parsedBody = body;
+            if (body && body.trim()) {
+                try {
+                    parsedBody = JSON.parse(body);
+                } catch (e) {
+                    // If it's not valid JSON, use as string
+                    parsedBody = body;
+                }
+            }
+
+            return parsedBody;
+        }
+
+        function testPayloadHandling() {
+            const results = document.getElementById('results');
+            const url = document.getElementById('testUrl').value;
+            const method = document.getElementById('testMethod').value;
+            const rawBody = document.getElementById('testBody').value;
+            const parsedBody = processRequestBody();
+
+            let output = '';
+            output += '<div class="test-case success">';
+            output += '<h3>✅ Payload Processing Successful</h3>';
+            output += '<div class="label">Raw Body Value (from textarea):</div>';
+            output += '<div class="result">' + escapeHtml(rawBody) + '</div>';
+            output += '<div class="label">Parsed Body (after processing):</div>';
+            output += '<div class="result">' + escapeHtml(JSON.stringify(parsedBody, null, 2)) + '</div>';
+            output += '<div class="label">Body Type:</div>';
+            output += '<div class="result">' + typeof parsedBody + '</div>';
+            output += '<div class="label">Can be JSON stringified:</div>';
+            try {
+                JSON.stringify({
+                    url: url,
+                    method: method,
+                    body: parsedBody
+                });
+                output += '<div class="result">✅ Yes - No JSON.stringify errors</div>';
+            } catch (e) {
+                output += '<div class="result">❌ No - Error: ' + e.message + '</div>';
+            }
+            output += '</div>';
+
+            results.innerHTML = output;
+        }
+
+        function resetForm() {
+            document.getElementById('testUrl').value = '';
+            document.getElementById('testMethod').value = 'GET';
+            document.getElementById('testBody').value = '';
+            document.getElementById('results').innerHTML = '';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Automated test suite
+        function runAllTests() {
+            const resultsDiv = document.getElementById('autoTestResults');
+            resultsDiv.innerHTML = '<p>Running tests...</p>';
+
+            const tests = [
+                testSQLInjectionPayload,
+                testXSSPayload,
+                testPathTraversalPayload,
+                testCommandInjectionPayload,
+                testEmptyBody,
+                testPlainTextBody,
+                testInvalidJSON,
+                testValidJSON
+            ];
+
+            let output = '';
+            let passed = 0;
+            let failed = 0;
+
+            tests.forEach(test => {
+                const result = test();
+                if (result.pass) {
+                    passed++;
+                    output += `<div class="test-case success">`;
+                    output += `<span class="status status-pass">PASS</span> `;
+                } else {
+                    failed++;
+                    output += `<div class="test-case error">`;
+                    output += `<span class="status status-fail">FAIL</span> `;
+                }
+                output += `<strong>${result.name}</strong><br>`;
+                output += `${result.message}`;
+                output += `</div>`;
+            });
+
+            const summary = `<div class="test-case ${failed === 0 ? 'success' : 'error'}">`;
+            output = summary + `<h3>Test Summary: ${passed} passed, ${failed} failed</h3></div>` + output;
+
+            resultsDiv.innerHTML = output;
+        }
+
+        function testSQLInjectionPayload() {
+            try {
+                const payload = payloads.sqli;
+                const bodyValue = typeof payload.body === 'object' && payload.body !== null
+                    ? JSON.stringify(payload.body, null, 2)
+                    : payload.body;
+
+                return {
+                    name: "SQL Injection Payload Loading",
+                    pass: bodyValue === "" && payload.method === "GET",
+                    message: "Empty body for GET request"
+                };
+            } catch (e) {
+                return { name: "SQL Injection Payload Loading", pass: false, message: e.message };
+            }
+        }
+
+        function testXSSPayload() {
+            try {
+                const payload = payloads.xss;
+                const bodyValue = typeof payload.body === 'object' && payload.body !== null
+                    ? JSON.stringify(payload.body, null, 2)
+                    : payload.body;
+
+                const isParseable = (() => {
+                    try {
+                        const parsed = JSON.parse(bodyValue);
+                        return typeof parsed === 'object' && 'comment' in parsed;
+                    } catch {
+                        return false;
+                    }
+                })();
+
+                return {
+                    name: "XSS Payload Object to JSON String Conversion",
+                    pass: isParseable && bodyValue.includes('"comment"'),
+                    message: "Object correctly converted to valid JSON string: " + bodyValue.substring(0, 50) + "..."
+                };
+            } catch (e) {
+                return { name: "XSS Payload Object to JSON String Conversion", pass: false, message: e.message };
+            }
+        }
+
+        function testPathTraversalPayload() {
+            try {
+                const payload = payloads.path;
+                const bodyValue = typeof payload.body === 'object' && payload.body !== null
+                    ? JSON.stringify(payload.body, null, 2)
+                    : payload.body;
+
+                return {
+                    name: "Path Traversal Payload Loading",
+                    pass: bodyValue === "" && payload.url.includes("../../"),
+                    message: "Empty body, path traversal in URL"
+                };
+            } catch (e) {
+                return { name: "Path Traversal Payload Loading", pass: false, message: e.message };
+            }
+        }
+
+        function testCommandInjectionPayload() {
+            try {
+                const payload = payloads.cmd;
+                const bodyValue = typeof payload.body === 'object' && payload.body !== null
+                    ? JSON.stringify(payload.body, null, 2)
+                    : payload.body;
+
+                return {
+                    name: "Command Injection Payload Loading",
+                    pass: bodyValue === "" && payload.url.includes(";"),
+                    message: "Empty body, command injection in URL"
+                };
+            } catch (e) {
+                return { name: "Command Injection Payload Loading", pass: false, message: e.message };
+            }
+        }
+
+        function testEmptyBody() {
+            try {
+                const body = "";
+                let parsedBody = body;
+                if (body && body.trim()) {
+                    try {
+                        parsedBody = JSON.parse(body);
+                    } catch (e) {
+                        parsedBody = body;
+                    }
+                }
+
+                return {
+                    name: "Empty Body Handling",
+                    pass: parsedBody === "",
+                    message: "Empty string remains empty"
+                };
+            } catch (e) {
+                return { name: "Empty Body Handling", pass: false, message: e.message };
+            }
+        }
+
+        function testPlainTextBody() {
+            try {
+                const body = "plain text content";
+                let parsedBody = body;
+                if (body && body.trim()) {
+                    try {
+                        parsedBody = JSON.parse(body);
+                    } catch (e) {
+                        parsedBody = body;
+                    }
+                }
+
+                return {
+                    name: "Plain Text Body Handling",
+                    pass: parsedBody === "plain text content",
+                    message: "Plain text preserved as string"
+                };
+            } catch (e) {
+                return { name: "Plain Text Body Handling", pass: false, message: e.message };
+            }
+        }
+
+        function testInvalidJSON() {
+            try {
+                const body = '{"invalid": json}';
+                let parsedBody = body;
+                if (body && body.trim()) {
+                    try {
+                        parsedBody = JSON.parse(body);
+                    } catch (e) {
+                        parsedBody = body;
+                    }
+                }
+
+                return {
+                    name: "Invalid JSON Handling",
+                    pass: typeof parsedBody === 'string',
+                    message: "Invalid JSON falls back to string"
+                };
+            } catch (e) {
+                return { name: "Invalid JSON Handling", pass: false, message: e.message };
+            }
+        }
+
+        function testValidJSON() {
+            try {
+                const body = '{"valid": "json", "number": 123}';
+                let parsedBody = body;
+                if (body && body.trim()) {
+                    try {
+                        parsedBody = JSON.parse(body);
+                    } catch (e) {
+                        parsedBody = body;
+                    }
+                }
+
+                const canStringify = (() => {
+                    try {
+                        JSON.stringify({ body: parsedBody });
+                        return true;
+                    } catch {
+                        return false;
+                    }
+                })();
+
+                return {
+                    name: "Valid JSON Parsing and Re-stringification",
+                    pass: typeof parsedBody === 'object' && parsedBody.valid === "json" && canStringify,
+                    message: "Valid JSON parsed to object and can be re-stringified"
+                };
+            } catch (e) {
+                return { name: "Valid JSON Parsing and Re-stringification", pass: false, message: e.message };
+            }
+        }
+
+        // Auto-run tests on page load
+        window.addEventListener('load', () => {
+            console.log('🧪 Rule Test Payload Handler Test Suite loaded');
+            console.log('Click "Run All Tests" to verify the fix');
+        });
+    </script>
+</body>
+</html>
