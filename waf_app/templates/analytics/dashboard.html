@@ -1,9 +1,5 @@
-{% extends "site_management/_base.html" %}
-{% load static %}
-
-{% block title %}Analytics Dashboard - WAF Management{% endblock %}
-
-{% block extra_js %}
+{% extends "site_management/_base.html" %} {% load static %} {% block title
+%}Analytics Dashboard - WAF Management{% endblock %} {% block extra_js %}
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -11,7 +7,7 @@
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/datamaps@0.5.9/dist/datamaps.world.min.js"></script>
 
-<style></style>
+<style>
     #map-container {
         position: relative;
         width: 100%;
@@ -108,51 +104,123 @@
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
     }
 </style>
-{% endblock %}
-
-{% block content %}
-<div id="page-meta" data-current-site="{{ current_site.slug }}" data-days="{{ days }}" style="display: none"></div>
+{% endblock %} {% block content %}
+<div
+    id="page-meta"
+    data-current-site="{{ current_site.slug }}"
+    data-days="{{ days }}"
+    style="display: none"
+></div>
 
 {% if error %}
-<div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert">
+<div
+    class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400"
+    role="alert"
+>
     {{ error }}
 </div>
 {% endif %}
 
 <!-- Header with Site Selector and Time Range -->
-<div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+<div
+    class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+>
     <div>
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Analytics Dashboard</h1>
-        <p class="text-gray-600 dark:text-gray-400">Geographic request analytics and threat monitoring</p>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            Analytics Dashboard
+        </h1>
+        <p class="text-gray-600 dark:text-gray-400">
+            Geographic request analytics and threat monitoring
+        </p>
     </div>
 
     <div class="flex gap-3">
         <!-- Site Selector -->
-        <select id="site-selector" class="bg-white border border-gray-300 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5">
+        <select
+            id="site-selector"
+            class="bg-white border border-gray-300 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5"
+        >
             {% for site in sites %}
-            <option value="{{ site.slug }}" {% if site == current_site %}selected{% endif %}>{{ site.host }}</option>
+            <option
+                value="{{ site.slug }}"
+                {%
+                if
+                site=""
+                ="current_site"
+                %}selected{%
+                endif
+                %}
+            >
+                {{ site.host }}
+            </option>
             {% endfor %}
         </select>
 
         <!-- Time Range Selector -->
-        <select id="time-range" class="bg-white border border-gray-300 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5">
-            <option value="1" {% if days == 1 %}selected{% endif %}>Last 24 Hours</option>
-            <option value="7" {% if days == 7 %}selected{% endif %}>Last 7 Days</option>
-            <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 Days</option>
-            <option value="90" {% if days == 90 %}selected{% endif %}>Last 90 Days</option>
+        <select
+            id="time-range"
+            class="bg-white border border-gray-300 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5"
+        >
+            <option value="1" {% if days="" ="1" %}selected{% endif %}>
+                Last 24 Hours
+            </option>
+            <option value="7" {% if days="" ="7" %}selected{% endif %}>
+                Last 7 Days
+            </option>
+            <option value="30" {% if days="" ="30" %}selected{% endif %}>
+                Last 30 Days
+            </option>
+            <option value="90" {% if days="" ="90" %}selected{% endif %}>
+                Last 90 Days
+            </option>
         </select>
 
         <!-- Export Dropdown -->
-        <button id="dropdownExportButton" data-dropdown-toggle="dropdownExport" class="text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center" type="button">
+        <button
+            id="dropdownExportButton"
+            data-dropdown-toggle="dropdownExport"
+            class="text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center"
+            type="button"
+        >
             Export
-            <svg class="w-2.5 h-2.5 ms-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
-                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
+            <svg
+                class="w-2.5 h-2.5 ms-3"
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 10 6"
+            >
+                <path
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="m1 1 4 4 4-4"
+                />
             </svg>
         </button>
-        <div id="dropdownExport" class="z-10 hidden bg-white dark:bg-gray-700 divide-y divide-gray-100 dark:divide-gray-600 rounded-lg shadow w-44">
-            <ul class="py-2 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownExportButton">
-                <li><a href="{% url 'export_csv' current_site.slug %}?days={{ days }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Export CSV</a></li>
-                <li><a href="{% url 'export_json' current_site.slug %}?days={{ days }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Export JSON</a></li>
+        <div
+            id="dropdownExport"
+            class="z-10 hidden bg-white dark:bg-gray-700 divide-y divide-gray-100 dark:divide-gray-600 rounded-lg shadow w-44"
+        >
+            <ul
+                class="py-2 text-sm text-gray-700 dark:text-gray-200"
+                aria-labelledby="dropdownExportButton"
+            >
+                <li>
+                    <a
+                        href="{% url 'export_csv' current_site.slug %}?days={{ days }}"
+                        class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600"
+                        >Export CSV</a
+                    >
+                </li>
+                <li>
+                    <a
+                        href="{% url 'export_json' current_site.slug %}?days={{ days }}"
+                        class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600"
+                        >Export JSON</a
+                    >
+                </li>
             </ul>
         </div>
     </div>
@@ -161,31 +229,71 @@
 <!-- Key Metrics Cards -->
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
     <!-- Total Requests -->
-    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow">
+    <div
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow"
+    >
         <div class="flex items-center justify-between mb-2">
-            <h5 class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Requests</h5>
-            <svg class="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"></path>
+            <h5 class="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Total Requests
+            </h5>
+            <svg
+                class="w-5 h-5 text-blue-500"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+            >
+                <path
+                    d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"
+                ></path>
             </svg>
         </div>
-        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ total_requests|default:"0" }}</p>
+        <p class="text-3xl font-bold text-gray-900 dark:text-white">
+            {{ total_requests|default:"0" }}
+        </p>
     </div>
 
     <!-- Blocked Requests -->
-    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow">
+    <div
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow"
+    >
         <div class="flex items-center justify-between mb-2">
-            <h5 class="text-sm font-medium text-gray-600 dark:text-gray-400">Blocked</h5>
-            <svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clip-rule="evenodd"></path>
+            <h5 class="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Blocked
+            </h5>
+            <svg
+                class="w-5 h-5 text-red-500"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+            >
+                <path
+                    fill-rule="evenodd"
+                    d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z"
+                    clip-rule="evenodd"
+                ></path>
             </svg>
         </div>
-        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ blocked_requests|default:"0" }}</p>
-        <p class="text-sm text-gray-600 dark:text-gray-400">{{ blocked_percentage|floatformat:1 }}%</p>
+        <p class="text-3xl font-bold text-gray-900 dark:text-white">
+            {{ blocked_requests|default:"0" }}
+        </p>
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+            {{ blocked_percentage|floatformat:1 }}%
+        </p>
     </div>
 
     <!-- Unique Countries -->
-    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow">
+    <div
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow"
+    >
         <div class="flex items-center justify-between mb-2">
-            <h5 class="text-sm font-medium text-gray-600 dark:text-gray-400">Countries</h5>
-            <svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-{ %endblock }
+            <h5 class="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Countries
+            </h5>
+            <svg
+                class="w-5 h-5 text-green-500"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+            >
+                {% endblock %}
+            </svg>
+        </div>
+    </div>
+</div>
