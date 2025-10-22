@@ -436,7 +436,10 @@ class CertificateManager:
     def _check_acme_sh_available(self) -> bool:
         """Check if acme.sh is available on the system"""
         try:
-            result = subprocess.run(['acme.sh', '--version'], capture_output=True, timeout=5)
+            acme_sh_path = Path.home() / '.acme.sh' / 'acme.sh'
+            if not acme_sh_path.exists():
+                return False
+            result = subprocess.run([str(acme_sh_path), '--version'], capture_output=True, timeout=5)
             return result.returncode == 0
         except (subprocess.TimeoutExpired, FileNotFoundError):
             return False
@@ -469,7 +472,8 @@ class CertificateManager:
     def _build_acme_command(self, domain: str, wildcard_domain: str, email: str,
                           dns_provider: str, staging: bool) -> List[str]:
         """Build acme.sh command for wildcard certificate generation"""
-        cmd = ['acme.sh', '--issue', '--dns', 'dns_manual']
+        acme_sh_path = str(Path.home() / '.acme.sh' / 'acme.sh')
+        cmd = [acme_sh_path, '--issue', '--dns', 'dns_manual']
 
         if staging:
             cmd.append('--staging')

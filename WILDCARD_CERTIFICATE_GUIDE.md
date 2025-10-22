@@ -31,8 +31,8 @@ Certificates are automatically saved to your Caddy certificate directory:
 # Install acme.sh
 curl https://get.acme.sh | sh -s email=your-email@example.com
 
-# Reload your shell or run:
-source ~/.bashrc
+# Note: acme.sh will be installed to ~/.acme.sh/
+# The certificate manager automatically uses the full path, so it doesn't need to be in your PATH
 ```
 
 ### 2. DNS Provider Setup
@@ -226,9 +226,9 @@ crontab -e
 
 1. **acme.sh not found**
    ```
-   ❌ acme.sh not found. Please install acme.sh first.
+   ❌ acme.sh is not installed or not available in PATH
    ```
-   Solution: Install acme.sh or ensure it's in your PATH
+   Solution: Install acme.sh using `curl https://get.acme.sh | sh`. It will be installed to `~/.acme.sh/` and the certificate manager will automatically detect it.
 
 2. **DNS API credentials not set**
    ```
