@@ -103,7 +103,7 @@ class ProxyMiddleware(MiddlewareMixin):
         try:
             return Site.objects.get(host=host, status='active')
         except Site.DoesNotExist:
-            return Site.objects.filter(status='active').first()
+            return None
 
     def _select_backend(self, site: Site, request) -> Optional[Dict]:
         """Select backend server based on load balancing algorithm"""
