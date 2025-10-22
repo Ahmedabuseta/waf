@@ -11,11 +11,11 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'waf_app.settings')
 django.setup()
 
-from site_mangement.validators import SiteSSLValidator
-from site_mangement.utils.acme_dns_manager import ACMEDNSManager
-from site_mangement.utils.certificate_checker import CertificateChecker
-from site_mangement.ssl_helpers import SSLHelper
-from site_mangement.models import Site
+from site_management.validators import SiteSSLValidator
+from site_management.utils.acme_dns_manager import ACMEDNSManager
+from site_management.utils.certificate_checker import CertificateChecker
+from site_management.ssl_helpers import SSLHelper
+from site_management.models import Site
 from django.core.exceptions import ValidationError
 
 

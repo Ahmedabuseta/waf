@@ -37,6 +37,7 @@ LOGGING = {
     },
     'loggers': {
         # WAF request phase logs
+        'waf': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
         'waf.request': {
             'handlers': ['console'],
             'level': 'INFO',

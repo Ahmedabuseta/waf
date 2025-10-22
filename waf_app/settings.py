@@ -37,6 +37,7 @@ if DEBUG:
             },
         },
         'loggers': {
+            'waf': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
             'django.security.DisallowedHost': {
                 'handlers': ['console'],
                 'level': 'DEBUG',
@@ -62,7 +63,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'waf_app',
-    'site_mangement.apps.SiteMangementConfig',
+    'site_management.apps.SiteManagementConfig',
     'compressor'
 ]
 COMPRESS_ROOT = BASE_DIR / 'waf_app/static/'
@@ -92,7 +93,7 @@ CSRF_TRUSTED_ORIGINS = [
     'http://0.0.0.0:8000',
 ]
 CSRF_USE_SESSIONS = False  # Use cookies by default
-CSRF_FAILURE_VIEW = 'site_mangement.views.csrf_failure_view'
+CSRF_FAILURE_VIEW = 'site_management.views.csrf_failure_view'
 STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
@@ -107,20 +108,20 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 
-    'site_mangement.middlewares.waf_middleware.WAFMiddleware',  # WAF with rule engine
-    'site_mangement.middlewares.proxy_middleware.ProxyMiddleware',  # Uncomment to enable proxy forwarding
-     # New custom middleware
-    'site_mangement.middlewares.request_id_middleware.RequestIDMiddleware',
-    'site_mangement.middlewares.rate_limiting_middleware.RateLimitMiddleware',
-    'site_mangement.middlewares.request_logging_middleware.RequestLoggingMiddleware',
+    'site_management.middlewares.rate_limiting_middleware.RateLimitMiddleware',
+    'site_management.middlewares.waf_middleware.WAFMiddleware',  # WAF with rule engine
 
+    # 'site_management.middlewares.request_logging_middleware.RequestLoggingMiddleware',
+    # 'site_management.middlewares.request_id_middleware.RequestIDMiddleware',
      # Security headers last
-     'site_mangement.middlewares.security_headers_middleware.SecurityHeadersMiddleware',
+     'site_management.middlewares.security_headers_middleware.security_headers_middleware',
+     'site_management.middlewares.proxy_middleware.ProxyMiddleware',  # Uncomment to enable proxy forwarding
+
 ]
 
 # Add CSRF debug middleware in DEBUG mode
 if DEBUG:
-    MIDDLEWARE.insert(-1, 'site_mangement.middlewares.csrf_debug_middleware.CSRFDebugMiddleware')
+    MIDDLEWARE.insert(-1, 'site_management.middlewares.csrf_debug_middleware.CSRFDebugMiddleware')
 
 DJANGO_SETTINGS_MODULE='waf_app.settings_dev'
 ROOT_URLCONF = 'waf_app.urls'
@@ -222,8 +223,8 @@ CACHES = {
     }
 }
 
-# Caddy persistence path (used by site_mangement.caddy_manager)
+# Caddy persistence path (used by site_management.caddy_manager)
 CADDY_PERSIST_PATH = os.environ.get('CADDY_PERSIST_PATH', str(BASE_DIR / 'managed_config.json'))
 
-# Caddy log directory (used by site_mangement.caddy_logger)
+# Caddy log directory (used by site_management.caddy_logger)
 CADDY_LOG_DIR = os.environ.get('CADDY_LOG_DIR', str(BASE_DIR / 'logs' / 'caddy-manager'))

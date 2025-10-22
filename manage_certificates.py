@@ -17,7 +17,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'waf_app.settings')
 
 # Import and run certificate manager
 try:
-    from site_mangement.utils.certificate_manager import main
+    from site_management.utils.certificate_manager import main
     sys.exit(main())
 except ImportError as e:
     print(f"❌ Import error: {e}")

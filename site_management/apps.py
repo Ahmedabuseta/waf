@@ -1,0 +1,13 @@
+from django.apps import AppConfig
+
+
+class SiteManagementConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'site_management'
+
+    def ready(self):
+        """
+        Import signals when Django starts
+        This ensures all signal handlers are registered
+        """
+        import site_management.signals  # noqa

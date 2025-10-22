@@ -5,11 +5,11 @@ from datetime import timedelta
 
 class RequestAnalytics(models.Model):
     """Store detailed analytics for each request with geographic information"""
-    
-    site = models.ForeignKey('site_mangement.Site', on_delete=models.CASCADE, related_name='analytics')
+
+    site = models.ForeignKey('site_management.Site', on_delete=models.CASCADE, related_name='analytics')
     timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
     ip_address = models.GenericIPAddressField(db_index=True)
-    
+
     # Geographic
     country = models.CharField(max_length=100, blank=True, null=True)
     country_code = models.CharField(max_length=2, blank=True, null=True, db_index=True)
@@ -17,22 +17,22 @@ class RequestAnalytics(models.Model):
     region = models.CharField(max_length=100, blank=True, null=True)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
-    
+
     # Request
     request_method = models.CharField(max_length=10)
     request_url = models.TextField()
     request_path = models.TextField()
     user_agent = models.TextField(blank=True, null=True)
     referer = models.TextField(blank=True, null=True)
-    
+
     # Response
     status_code = models.IntegerField()
     response_time = models.FloatField(help_text="Response time in milliseconds")
-    
+
     # Security
     ACTION_CHOICES = [('allowed', 'Allowed'), ('blocked', 'Blocked'), ('rate_limited', 'Rate Limited')]
     THREAT_CHOICES = [('none', 'None'), ('low', 'Low'), ('medium', 'Medium'), ('high', 'High'), ('critical', 'Critical')]
-    
+
     action_taken = models.CharField(max_length=20, choices=ACTION_CHOICES, default='allowed', db_index=True)
     threat_level = models.CharField(max_length=10, choices=THREAT_CHOICES, default='none', db_index=True)
     threat_type = models.CharField(max_length=50, blank=True, null=True)
@@ -54,12 +54,12 @@ class RequestAnalytics(models.Model):
 
 class GeographicStats(models.Model):
     """Aggregated daily statistics by geographic location"""
-    
-    site = models.ForeignKey('site_mangement.Site', on_delete=models.CASCADE, related_name='geographic_stats')
+
+    site = models.ForeignKey('site_management.Site', on_delete=models.CASCADE, related_name='geographic_stats')
     date = models.DateField(db_index=True)
     country = models.CharField(max_length=100)
     country_code = models.CharField(max_length=2, db_index=True)
-    
+
     # Metrics
     total_requests = models.IntegerField(default=0)
     blocked_requests = models.IntegerField(default=0)
@@ -85,7 +85,7 @@ class GeographicStats(models.Model):
 
 class ThreatAlert(models.Model):
     """Store threat alerts for monitoring and email notifications"""
-    
+
     ALERT_TYPE_CHOICES = [
         ('high_volume', 'High Volume Attack'),
         ('geographic_anomaly', 'Geographic Anomaly'),
@@ -94,8 +94,8 @@ class ThreatAlert(models.Model):
         ('ddos', 'Possible DDoS'),
     ]
     SEVERITY_CHOICES = [('low', 'Low'), ('medium', 'Medium'), ('high', 'High'), ('critical', 'Critical')]
-    
-    site = models.ForeignKey('site_mangement.Site', on_delete=models.CASCADE, related_name='threat_alerts')
+
+    site = models.ForeignKey('site_management.Site', on_delete=models.CASCADE, related_name='threat_alerts')
     timestamp = models.DateTimeField(auto_now_add=True)
     alert_type = models.CharField(max_length=50, choices=ALERT_TYPE_CHOICES)
     severity = models.CharField(max_length=10, choices=SEVERITY_CHOICES, default='medium')
@@ -121,10 +121,10 @@ class ThreatAlert(models.Model):
 
 class EmailReport(models.Model):
     """Track scheduled email reports for analytics"""
-    
+
     FREQUENCY_CHOICES = [('daily', 'Daily'), ('weekly', 'Weekly'), ('monthly', 'Monthly')]
-    
-    site = models.ForeignKey('site_mangement.Site', on_delete=models.CASCADE, related_name='email_reports')
+
+    site = models.ForeignKey('site_management.Site', on_delete=models.CASCADE, related_name='email_reports')
     recipient_email = models.EmailField()
     frequency = models.CharField(max_length=20, choices=FREQUENCY_CHOICES, default='weekly')
     include_geographic = models.BooleanField(default=True)
@@ -141,7 +141,7 @@ class EmailReport(models.Model):
 
     def __str__(self):
         return f"{self.recipient_email} - {self.frequency} - {self.site.host}"
-    
+
     def calculate_next_send(self):
         now = timezone.now()
         days = {'daily': 1, 'weekly': 7, 'monthly': 30}
