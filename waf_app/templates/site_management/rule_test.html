@@ -190,9 +190,18 @@ const v = "script"
       };
 
       try {
+          // Get CSRF token from cookie
+          const csrftoken = document.cookie
+              .split('; ')
+              .find(row => row.startsWith('csrftoken='))
+              ?.split('=')[1];
+
           const response = await fetch('/sites/{{ site.slug }}/rules/test/', {
               method: 'POST',
-              headers: {'Content-Type': 'application/json'},
+              headers: {
+                  'Content-Type': 'application/json',
+                  'X-CSRFToken': csrftoken
+              },
               body: JSON.stringify(testData)
           });
 
