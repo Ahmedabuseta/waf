@@ -47,14 +47,14 @@
     <!-- Test Form -->
     <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
         <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Test Request</h2>
-        
+
         <form id="testForm" class="space-y-4">
             <!-- URL -->
             <div>
                 <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Request URL</label>
                 <input type="text" id="testUrl" class="bg-white border border-gray-300 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="https://example.com/page?id=1' OR '1'='1">
             </div>
-            
+
             <!-- Method -->
             <div>
                 <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">HTTP Method</label>
@@ -65,13 +65,13 @@
                     <option value="DELETE">DELETE</option>
                 </select>
             </div>
-            
+
             <!-- Body -->
             <div>
                 <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Request Body (for POST)</label>
                 <textarea id="testBody" rows="3" class="bg-white border border-gray-300 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder='{"username": "admin", "password": "admin\' OR \'1\'=\'1"}'></textarea>
             </div>
-            
+
             <!-- Quick Tests -->
             <div>
                 <label class="block mb-2 text-sm font-medium  dark:text-white ">Quick Test Payloads</label>
@@ -82,20 +82,20 @@
                     <button type="button" onclick="loadPayload('cmd')" class=" dark:text-white  bg-purple-600 hover:bg-purple-700 rounded-lg text-xs px-3 py-2">Command Injection</button>
                 </div>
             </div>
-            
+
             <button type="submit" class="w-full text-white dark:text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-800 font-medium rounded-lg text-sm px-5 py-2.5">
                 Test Request
             </button>
         </form>
     </div>
-    
+
     <!-- Results -->
     <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
         <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Test Results</h2>
-        
+
         <div id="results" class="hidden">
             <div id="resultStatus" class="mb-4 p-4 rounded-lg"></div>
-            
+
             <div id="matchDetails" class="hidden bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                 <h3 class="text-gray-900 dark:text-white font-semibold mb-3">Match Details</h3>
                 <div class="space-y-2 text-sm">
@@ -118,7 +118,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div id="noResults" class="text-center py-12">
             <svg class="mx-auto h-12 w-12 text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -129,131 +129,130 @@
 </div>
 
 <script>
-const payloads = {
-    sqli: {
-        url: "https://{{ site.host }}/search?q=1' OR '1'='1",
-        method: "GET",
-        body: ""
-    },
-    xss: {
-        url: "https://{{ site.host }}/comment",
-        method: "POST",
-        body: '{"comment": "<script>alert(\\'XSS\\')</script>"}'
-    },
-    path: {
-        url: "https://{{ site.host }}/files?path=../../etc/passwd",
-        method: "GET",
-        body: ""
-    },
-    cmd: {
-        url: "https://{{ site.host }}/ping?host=127.0.0.1;ls -la",
-        method: "GET",
-        body: ""
-    }
-};
+const v = "script"
+  const payloads = {
+      sqli: {
+          url: "https://{{ site.host }}/search?q=1' OR '1'='1",
+          method: "GET",
+          body: ""
+      },
+      xss: {
+          url: "https://{{ site.host }}/comment",
+          method: "POST",
+          body: {"comment": `<script>alert(\'XSS\')</${v}>`}
+      },
+      path: {
+          url: "https://{{ site.host }}/files?path=../../etc/passwd",
+          method: "GET",
+          body: ""
+      },
+      cmd: {
+          url: "https://{{ site.host }}/ping?host=127.0.0.1;ls -la",
+          method: "GET",
+          body: ""
+      }
+  };
 
-function loadPayload(type) {
-    const payload = payloads[type];
-    document.getElementById('testUrl').value = payload.url;
-    document.getElementById('testMethod').value = payload.method;
-    document.getElementById('testBody').value = payload.body;
-}
+  function loadPayload(type) {
+      const payload = payloads[type];
+      document.getElementById('testUrl').value = payload.url;
+      document.getElementById('testMethod').value = payload.method;
+      document.getElementById('testBody').value = payload.body;
+  }
 
-document.getElementById('testForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const url = document.getElementById('testUrl').value;
-    const method = document.getElementById('testMethod').value;
-    const body = document.getElementById('testBody').value;
-    
-    // Parse URL to get path and params
-    let path = '/';
-    let params = {};
-    try {
-        const urlObj = new URL(url);
-        path = urlObj.pathname;
-        urlObj.searchParams.forEach((value, key) => {
-            params[key] = value;
-        });
-    } catch (e) {
-        path = url;
-    }
-    
-    const testData = {
-        url: url,
-        path: path,
-        method: method,
-        params: params,
-        body: body,
-        headers: {}
-    };
-    
-    try {
-        const response = await fetch('/sites/{{ site.slug }}/rules/test/', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(testData)
-        });
-        
-        const result = await response.json();
-        displayResults(result);
-    } catch (error) {
-        alert('Error: ' + error.message);
-    }
-});
+  document.getElementById('testForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
 
-function displayResults(result) {
-    document.getElementById('noResults').classList.add('hidden');
-    document.getElementById('results').classList.remove('hidden');
-    
-    const statusDiv = document.getElementById('resultStatus');
-    const matchDiv = document.getElementById('matchDetails');
-    
-    if (result.blocked) {
-        statusDiv.className = 'mb-4 p-4 rounded-lg bg-red-900 border border-red-500';
-        statusDiv.innerHTML = `
-            <div class="flex items-center">
-                <svg class="w-6 h-6 text-red-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clip-rule="evenodd"></path>
-                </svg>
-                <span class=" dark:text-white  font-semibold">REQUEST BLOCKED</span>
-            </div>
-        `;
-    } else {
-        statusDiv.className = 'mb-4 p-4 rounded-lg bg-green-900 border border-green-500';
-        statusDiv.innerHTML = `
-            <div class="flex items-center">
-                <svg class="w-6 h-6 text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                </svg>
-                <span class=" dark:text-white  font-semibold">REQUEST ALLOWED</span>
-            </div>
-        `;
-    }
-    
-    if (result.match) {
-        matchDiv.classList.remove('hidden');
-        document.getElementById('ruleName').textContent = result.match.rule_name;
-        document.getElementById('threatType').textContent = result.match.threat_type;
-        document.getElementById('matchDetails_text').textContent = result.match.details;
-        
-        const levelSpan = document.getElementById('threatLevel');
-        levelSpan.textContent = result.match.threat_level.toUpperCase();
-        
-        if (result.match.threat_level === 'critical') {
-            levelSpan.className = 'px-2 py-1 rounded text-xs bg-red-900 text-red-300';
-        } else if (result.match.threat_level === 'high') {
-            levelSpan.className = 'px-2 py-1 rounded text-xs bg-orange-900 text-orange-300';
-        } else if (result.match.threat_level === 'medium') {
-            levelSpan.className = 'px-2 py-1 rounded text-xs bg-yellow-900 text-yellow-300';
-        } else {
-            levelSpan.className = 'px-2 py-1 rounded text-xs bg-blue-900 text-blue-300';
-        }
-    } else {
-        matchDiv.classList.add('hidden');
-    }
-}
+      const url = document.getElementById('testUrl').value;
+      const method = document.getElementById('testMethod').value;
+      const body = document.getElementById('testBody').value;
+
+      // Parse URL to get path and params
+      let path = '/';
+      let params = {};
+      try {
+          const urlObj = new URL(url);
+          path = urlObj.pathname;
+          urlObj.searchParams.forEach((value, key) => {
+              params[key] = value;
+          });
+      } catch (e) {
+          path = url;
+      }
+
+      const testData = {
+          url: url,
+          path: path,
+          method: method,
+          params: params,
+          body: body,
+          headers: {}
+      };
+
+      try {
+          const response = await fetch('/sites/{{ site.slug }}/rules/test/', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify(testData)
+          });
+
+          const result = await response.json();
+          displayResults(result);
+      } catch (error) {
+          alert('Error: ' + error.message);
+      }
+  });
+
+  function displayResults(result) {
+      document.getElementById('noResults').classList.add('hidden');
+      document.getElementById('results').classList.remove('hidden');
+
+      const statusDiv = document.getElementById('resultStatus');
+      const matchDiv = document.getElementById('matchDetails');
+
+      if (result.blocked) {
+          statusDiv.className = 'mb-4 p-4 rounded-lg bg-red-900 border border-red-500';
+          statusDiv.innerHTML = `
+              <div class="flex items-center">
+                  <svg class="w-6 h-6 text-red-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clip-rule="evenodd"></path>
+                  </svg>
+                  <span class=" dark:text-white  font-semibold">REQUEST BLOCKED</span>
+              </div>
+          `;
+      } else {
+          statusDiv.className = 'mb-4 p-4 rounded-lg bg-green-900 border border-green-500';
+          statusDiv.innerHTML = `
+              <div class="flex items-center">
+                  <svg class="w-6 h-6 text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                  </svg>
+                  <span class=" dark:text-white  font-semibold">REQUEST ALLOWED</span>
+              </div>
+          `;
+      }
+
+      if (result.match) {
+          matchDiv.classList.remove('hidden');
+          document.getElementById('ruleName').textContent = result.match.rule_name;
+          document.getElementById('threatType').textContent = result.match.threat_type;
+          document.getElementById('matchDetails_text').textContent = result.match.details;
+
+          const levelSpan = document.getElementById('threatLevel');
+          levelSpan.textContent = result.match.threat_level.toUpperCase();
+
+          if (result.match.threat_level === 'critical') {
+              levelSpan.className = 'px-2 py-1 rounded text-xs bg-red-900 text-red-300';
+          } else if (result.match.threat_level === 'high') {
+              levelSpan.className = 'px-2 py-1 rounded text-xs bg-orange-900 text-orange-300';
+          } else if (result.match.threat_level === 'medium') {
+              levelSpan.className = 'px-2 py-1 rounded text-xs bg-yellow-900 text-yellow-300';
+          } else {
+              levelSpan.className = 'px-2 py-1 rounded text-xs bg-blue-900 text-blue-300';
+          }
+      } else {
+          matchDiv.classList.add('hidden');
+      }
+  }
 </script>
 {% endblock %}
-
-
