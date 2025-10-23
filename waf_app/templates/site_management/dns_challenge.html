@@ -143,7 +143,6 @@ site.host }} - WAF Management{% endblock %} {% block content %}
 </div>
 
 <!-- DNS Record Configuration -->
-{% if instructions %}
 <div
     class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm mb-6"
 >
@@ -497,6 +496,7 @@ site.host }} - WAF Management{% endblock %} {% block content %}
 </div>
 
 <!-- Step-by-Step Instructions -->
+{% if instructions.instructions.steps %}
 <div
     class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm mb-6"
 >
@@ -663,6 +663,7 @@ site.host }} - WAF Management{% endblock %} {% block content %}
         {% endfor %}
     </ol>
 </div>
+{% endif %}
 
 <!-- DNS Verification -->
 <div
@@ -973,6 +974,7 @@ site.host }} - WAF Management{% endblock %} {% block content %}
 </div>
 
 <!-- Important Notes -->
+{% if instructions.important_notes %}
 <div
     class="bg-white dark:bg-gray-800 border border-yellow-300 dark:border-yellow-800 rounded-lg p-6 shadow-sm mb-6"
 >
@@ -1012,6 +1014,7 @@ site.host }} - WAF Management{% endblock %} {% block content %}
         {% endfor %}
     </ul>
 </div>
+{% endif %}
 
 <!-- DNS Provider Resources -->
 {% if instructions.common_dns_providers %}
@@ -1076,7 +1079,7 @@ site.host }} - WAF Management{% endblock %} {% block content %}
         {% endfor %}
     </div>
 </div>
-{% endif %} {% endif %}
+{% endif %}
 
 <script>
     function copyToClipboard(text) {

@@ -509,24 +509,35 @@ def dns_challenge_page(request, site_slug):
     if not txt_records_data and 'txt_records' in request.session:
         txt_records = request.session.get('txt_records', [])
         if txt_records:
-            instructions = cert_manager._format_dns_instructions(site.host, txt_records)
+            instructions_text = cert_manager._format_dns_instructions(site.host, txt_records)
             txt_records_data = {
                 'success': True,
                 'txt_records': txt_records,
-                'instructions': instructions
+                'instructions': instructions_text
             }
 
-    # Fallback to old method if no TXT records data
-    if not txt_records_data and site.has_dns_challenge():
+    # Initialize instructions as dict for template
+    instructions = {
+        'instructions': {
+            'steps': []
+        },
+        'important_notes': [],
+        'common_dns_providers': []
+    }
+    html_instructions = ''
+
+    # Use old method for instructions if site has challenge
+    if site.has_dns_challenge() and not txt_records_data:
         instructions = acme_manager.generate_challenge_instructions(
             domain=site.host,
             support_subdomains=site.support_subdomains,
             challenge_value=site.dns_challenge_value
         )
         html_instructions = ssl_helper.format_dns_instructions_html(instructions)
-    else:
-        instructions = txt_records_data.get('instructions', '') if txt_records_data else ''
-        html_instructions = instructions.replace('\n', '<br>')
+    elif txt_records_data:
+        # If we have txt_records_data, just use the text instructions for display
+        instructions_text = txt_records_data.get('instructions', '')
+        html_instructions = instructions_text.replace('\n', '<br>') if instructions_text else ''
 
     context = {
         'site': site,
