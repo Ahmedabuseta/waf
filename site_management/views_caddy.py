@@ -536,6 +536,8 @@ def dns_challenge_page(request, site_slug):
         'propagation_result': propagation_result,
         'has_challenge': site.has_dns_challenge(),
         'challenge_expired': site.is_dns_challenge_expired(),
+        'txt_records_data': txt_records_data,
+        'txt_records': txt_records_data.get('txt_records', []) if txt_records_data else [],
     }
 
     return render(request, 'site_management/dns_challenge.html', context)
