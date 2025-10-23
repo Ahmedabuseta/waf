@@ -356,7 +356,8 @@ site.host }} - WAF Management{% endblock %} {% block content %}
                             clip-rule="evenodd"
                         ></path>
                     </svg>
-                    TXT Record #{{ forloop.counter }} {% if txt_records|length >  1 %}
+                    TXT Record #{{ forloop.counter }} {% if txt_records|length >
+                    1 %}
                     <span class="ml-2 text-xs text-gray-600 dark:text-gray-400">
                         ({{ forloop.counter }} of {{ txt_records|length }})
                     </span>
@@ -434,7 +435,8 @@ site.host }} - WAF Management{% endblock %} {% block content %}
                                 class="text-xs text-green-600 dark:text-green-400 mt-1 ml-1 font-semibold"
                             >
                                 ⚠️ IMPORTANT: Add this EXACT value to your DNS
-                                provider (case-sensitive) {% if txt_records|length > 1 %}
+                                provider (case-sensitive) {% if
+                                txt_records|length > 1 %}
                                 <br />
                                 <span
                                     class="text-yellow-600 dark:text-yellow-400"
@@ -1178,6 +1180,28 @@ site.host }} - WAF Management{% endblock %} {% block content %}
                                 2. _acme-challenge.{{ site.host }} → (value from
                                 Record #2)
                             </div>
+                        </div>
+                        <div class="mt-3 text-center">
+                            <a
+                                href="https://github.com/yourusername/base-waf/blob/main/docs/DNS_VERIFICATION_TROUBLESHOOTING.md"
+                                target="_blank"
+                                class="inline-flex items-center text-xs text-blue-700 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 font-semibold underline"
+                            >
+                                📚 Read Full DNS Troubleshooting Guide
+                                <svg
+                                    class="w-3 h-3 ml-1"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                    ></path>
+                                </svg>
+                            </a>
                         </div>
                     </div>
                 </div>

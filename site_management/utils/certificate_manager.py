@@ -546,9 +546,15 @@ class CertificateManager:
             verification_failed = False
             verification_details = []
 
-            for record in txt_records:
+            print(f"📋 Checking {len(txt_records)} TXT record(s) for verification...")
+
+            for idx, record in enumerate(txt_records, 1):
                 record_name = record.get('name', '')
                 record_value = record.get('value', '')
+
+                print(f"\n🔍 Verifying Record #{idx} of {len(txt_records)}:")
+                print(f"   Name: {record_name}")
+                print(f"   Expected value: {record_value[:20]}...")
 
                 # Extract just the subdomain part for verification
                 # _acme-challenge.example.com -> check _acme-challenge.example.com
@@ -572,26 +578,39 @@ class CertificateManager:
 
                 if not verification_result.get('exists'):
                     verification_failed = True
-                    print(f"❌ DNS TXT record not found: {record_name}")
+                    print(f"❌ Record #{idx} - DNS TXT record not found: {record_name}")
                     print(f"   Expected value: {record_value}")
                 elif not verification_result.get('matched'):
                     verification_failed = True
-                    print(f"❌ DNS TXT record value mismatch for: {record_name}")
+                    print(f"❌ Record #{idx} - DNS TXT record value mismatch for: {record_name}")
                     print(f"   Expected value: {record_value}")
                     print(f"   Found values:   {found_values}")
                     print(f"   Note: For wildcard certificates, you need BOTH TXT records with the same name!")
                 else:
-                    print(f"✅ DNS TXT record verified: {record_name}")
+                    print(f"✅ Record #{idx} - DNS TXT record verified: {record_name}")
                     print(f"   Matched value: {record_value}")
 
             if verification_failed:
+                # Count how many passed vs failed
+                passed_count = sum(1 for detail in verification_details if detail.get('matched'))
+                failed_count = len(verification_details) - passed_count
+
+                print(f"\n{'='*70}")
+                print(f"❌ DNS Verification Failed!")
+                print(f"   Records passed: {passed_count}/{len(verification_details)}")
+                print(f"   Records failed: {failed_count}/{len(verification_details)}")
+                print(f"{'='*70}")
+
                 return {
                     "success": False,
                     "error": "DNS TXT record verification failed. Please ensure all records are added correctly and DNS has propagated.",
                     "verification_details": verification_details
                 }
 
-            print("✅ All DNS challenges verified successfully!")
+            print(f"\n{'='*70}")
+            print(f"✅ All DNS challenges verified successfully!")
+            print(f"   Total records verified: {len(verification_details)}/{len(verification_details)}")
+            print(f"{'='*70}\n")
 
             # Step 2: Generate certificate using acme.sh
             print(f"🔐 Generating wildcard certificate for {domain}...")
