@@ -539,11 +539,22 @@ def dns_challenge_page(request, site_slug):
         instructions_text = txt_records_data.get('instructions', '')
         html_instructions = instructions_text.replace('\n', '<br>') if instructions_text else ''
 
+    # Extract verification_details - it could be a list directly or nested in a dict
+    verification_details = None
+    if verification_result:
+        if isinstance(verification_result, list):
+            # verification_result is already the list of details
+            verification_details = verification_result
+        elif isinstance(verification_result, dict):
+            # verification_result is a dict with verification_details inside
+            verification_details = verification_result.get('verification_details')
+
     context = {
         'site': site,
         'instructions': instructions,
         'html_instructions': html_instructions,
         'verification_result': verification_result,
+        'verification_details': verification_details,
         'propagation_result': propagation_result,
         'has_challenge': site.has_dns_challenge(),
         'challenge_expired': site.is_dns_challenge_expired(),

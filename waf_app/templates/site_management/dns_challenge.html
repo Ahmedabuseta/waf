@@ -186,7 +186,8 @@ site.host }} - WAF Management{% endblock %} {% block content %}
                     type="submit"
                     name="action"
                     value="generate_challenge"
-                    class="text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium"
+                    class="text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-xs font-medium transition-colors"
+                    title="Get fresh TXT records from Let's Encrypt"
                 >
                     🔄 Regenerate TXT Records
                 </button>
@@ -279,6 +280,62 @@ site.host }} - WAF Management{% endblock %} {% block content %}
     {% if has_challenge %}
     <div class="space-y-4">
         {% if txt_records %}
+        <!-- Important notice for multiple records -->
+        {% if txt_records|length > 1 %}
+        <div
+            class="p-4 bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-400 dark:border-yellow-600 rounded-lg"
+        >
+            <div class="flex items-start">
+                <svg
+                    class="w-6 h-6 text-yellow-600 dark:text-yellow-400 mr-3 flex-shrink-0 mt-0.5"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                >
+                    <path
+                        fill-rule="evenodd"
+                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                        clip-rule="evenodd"
+                    ></path>
+                </svg>
+                <div>
+                    <p
+                        class="text-sm font-bold text-yellow-900 dark:text-yellow-200 mb-2"
+                    >
+                        ⚠️ IMPORTANT: You need to add {{ txt_records|length }}
+                        TXT records!
+                    </p>
+                    <p
+                        class="text-xs text-yellow-800 dark:text-yellow-300 mb-2"
+                    >
+                        For wildcard certificates, you must add
+                        <strong>BOTH</strong> TXT records below to your DNS
+                        provider:
+                    </p>
+                    <ul
+                        class="text-xs text-yellow-800 dark:text-yellow-300 space-y-1 ml-4 list-disc"
+                    >
+                        <li>
+                            Both records have the
+                            <strong>SAME NAME</strong> (_acme-challenge.{{
+                            site.host }})
+                        </li>
+                        <li>
+                            But each has a
+                            <strong>DIFFERENT VALUE</strong> (shown below)
+                        </li>
+                        <li>
+                            Most DNS providers support multiple TXT records with
+                            the same name
+                        </li>
+                        <li>
+                            Add them as <strong>separate records</strong>, not
+                            combined in one
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
         <!-- Multiple TXT Records from acme.sh -->
         {% for record in txt_records %}
         <div
@@ -299,7 +356,11 @@ site.host }} - WAF Management{% endblock %} {% block content %}
                             clip-rule="evenodd"
                         ></path>
                     </svg>
-                    TXT Record #{{ forloop.counter }}
+                    TXT Record #{{ forloop.counter }} {% if txt_records|length > 1 %}
+                    <span class="ml-2 text-xs text-gray-600 dark:text-gray-400">
+                        ({{ forloop.counter }} of {{ txt_records|length }})
+                    </span>
+                    {% endif %}
                 </h3>
                 <span
                     class="text-xs bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 px-2 py-1 rounded font-semibold"
@@ -373,7 +434,15 @@ site.host }} - WAF Management{% endblock %} {% block content %}
                                 class="text-xs text-green-600 dark:text-green-400 mt-1 ml-1 font-semibold"
                             >
                                 ⚠️ IMPORTANT: Add this EXACT value to your DNS
-                                provider (case-sensitive)
+                                provider (case-sensitive) {% if txt_records|length > 1 %}
+                                <br />
+                                <span
+                                    class="text-yellow-600 dark:text-yellow-400"
+                                >
+                                    ⚡ This is record {{ forloop.counter }} of
+                                    {{ txt_records|length }} - add ALL records!
+                                </span>
+                                {% endif %}
                             </p>
                         </td>
                     </tr>
@@ -534,6 +603,51 @@ site.host }} - WAF Management{% endblock %} {% block content %}
             → Done! ✅
         </p>
     </div>
+
+    {% if txt_records and txt_records|length > 1 %}
+    <div
+        class="mb-4 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-300 dark:border-purple-700 rounded-lg"
+    >
+        <p
+            class="text-sm text-purple-900 dark:text-purple-200 font-semibold mb-3"
+        >
+            📚 How to Add Multiple TXT Records in Your DNS Provider
+        </p>
+        <div class="space-y-2 text-xs text-purple-800 dark:text-purple-300">
+            <div class="flex items-start">
+                <span class="font-bold mr-2">1.</span>
+                <div>
+                    <strong>Cloudflare:</strong> Click "Add record" twice, use
+                    same Name, different Content values
+                </div>
+            </div>
+            <div class="flex items-start">
+                <span class="font-bold mr-2">2.</span>
+                <div>
+                    <strong>Route53:</strong> Create one record, add both values
+                    separated by newlines in the Value field
+                </div>
+            </div>
+            <div class="flex items-start">
+                <span class="font-bold mr-2">3.</span>
+                <div>
+                    <strong>GoDaddy/Namecheap:</strong> Add each record
+                    separately with the same Host
+                </div>
+            </div>
+            <div
+                class="mt-2 p-2 bg-white dark:bg-gray-800 rounded border border-purple-300 dark:border-purple-600"
+            >
+                <code class="text-xs">
+                    Name: _acme-challenge<br />
+                    Type: TXT<br />
+                    Value 1: [First value from Record #1]<br />
+                    Value 2: [Second value from Record #2]
+                </code>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <div class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-6">
         <div class="flex items-center">
@@ -864,7 +978,7 @@ site.host }} - WAF Management{% endblock %} {% block content %}
             </svg>
             <div class="flex-1">
                 <h3 class="font-semibold text-red-800 dark:text-red-300">
-                    DNS Record Not Found
+                    DNS Verification Failed
                 </h3>
                 <p class="text-sm text-red-700 dark:text-red-400 mt-1">
                     {{ verification_result.message }}
@@ -873,6 +987,86 @@ site.host }} - WAF Management{% endblock %} {% block content %}
                 <p class="text-sm text-red-600 dark:text-red-400 mt-2">
                     💡 {{ verification_result.help }}
                 </p>
+                {% endif %}
+
+                <!-- Show detailed error if we have verification_details -->
+                {% if verification_details %}
+                <div
+                    class="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded"
+                >
+                    <p
+                        class="text-xs font-semibold text-yellow-900 dark:text-yellow-200 mb-2"
+                    >
+                        🔍 Verification Details:
+                    </p>
+                    {% for detail in verification_details %}
+                    <div
+                        class="text-xs text-yellow-800 dark:text-yellow-300 mb-2"
+                    >
+                        <div class="font-semibold">
+                            Record: {{ detail.record_name }}
+                        </div>
+                        <div class="mt-1">
+                            {% if detail.exists and not detail.matched %}
+                            <span class="text-red-600 dark:text-red-400"
+                                >❌ Value mismatch!</span
+                            >
+                            <div
+                                class="mt-1 p-2 bg-white dark:bg-gray-800 rounded border border-yellow-300 dark:border-yellow-600"
+                            >
+                                <div class="mb-1">
+                                    <strong>Expected:</strong>
+                                </div>
+                                <code class="text-xs break-all"
+                                    >{{ detail.record_value }}</code
+                                >
+                                <div class="mt-2 mb-1">
+                                    <strong>Found in DNS:</strong>
+                                </div>
+                                <code class="text-xs break-all"
+                                    >{{ detail.found_value }}</code
+                                >
+                            </div>
+                            {% elif not detail.exists %}
+                            <span class="text-red-600 dark:text-red-400"
+                                >❌ Record not found in DNS</span
+                            >
+                            {% else %}
+                            <span class="text-green-600 dark:text-green-400"
+                                >✅ Verified</span
+                            >
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Helpful suggestions -->
+                <div
+                    class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-700 rounded"
+                >
+                    <p
+                        class="text-xs font-semibold text-blue-900 dark:text-blue-200 mb-2"
+                    >
+                        💡 Quick Fixes:
+                    </p>
+                    <ul
+                        class="text-xs text-blue-800 dark:text-blue-300 space-y-1 ml-4 list-disc"
+                    >
+                        <li>
+                            <strong>Option 1:</strong> Update your DNS TXT
+                            record value to match the expected value above
+                        </li>
+                        <li>
+                            <strong>Option 2:</strong> Click "Regenerate TXT
+                            Records" to get fresh values from Let's Encrypt
+                        </li>
+                        <li>
+                            <strong>Option 3:</strong> If you just updated DNS,
+                            wait 5-10 more minutes for propagation
+                        </li>
+                    </ul>
+                </div>
                 {% endif %}
             </div>
             {% endif %}
