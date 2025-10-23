@@ -542,7 +542,25 @@ class CertificateManager:
                     return records_result
                 txt_records = records_result.get('txt_records', [])
 
-            # Step 1: Verify all DNS records
+            # Step 1: Flush system DNS cache to ensure fresh results
+            print(f"🔄 Flushing system DNS cache...")
+            try:
+                import subprocess
+                result = subprocess.run(
+                    ['sudo', 'systemd-resolve', '--flush-caches'],
+                    capture_output=True,
+                    timeout=5
+                )
+                if result.returncode == 0:
+                    print(f"   ✅ System DNS cache flushed successfully")
+                else:
+                    print(f"   ⚠️  Could not flush system DNS cache (may need sudo)")
+                    print(f"   Continuing with verification anyway...")
+            except Exception as e:
+                print(f"   ⚠️  Could not flush system DNS cache: {e}")
+                print(f"   Continuing with verification anyway...")
+
+            # Step 2: Verify all DNS records
             verification_failed = False
             verification_details = []
 
