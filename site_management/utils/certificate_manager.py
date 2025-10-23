@@ -557,22 +557,32 @@ class CertificateManager:
                     expected_value=record_value
                 )
 
+                # Get the actual values found in DNS
+                found_values = verification_result.get('values', [])
+                found_value_str = ', '.join(found_values) if found_values else None
+
                 verification_details.append({
                     "record_name": record_name,
                     "record_value": record_value,
                     "exists": verification_result.get('exists'),
                     "matched": verification_result.get('matched'),
-                    "found_value": verification_result.get('found_value')
+                    "found_value": found_value_str,
+                    "found_values": found_values
                 })
 
                 if not verification_result.get('exists'):
                     verification_failed = True
                     print(f"❌ DNS TXT record not found: {record_name}")
+                    print(f"   Expected value: {record_value}")
                 elif not verification_result.get('matched'):
                     verification_failed = True
                     print(f"❌ DNS TXT record value mismatch for: {record_name}")
+                    print(f"   Expected value: {record_value}")
+                    print(f"   Found values:   {found_values}")
+                    print(f"   Note: For wildcard certificates, you need BOTH TXT records with the same name!")
                 else:
                     print(f"✅ DNS TXT record verified: {record_name}")
+                    print(f"   Matched value: {record_value}")
 
             if verification_failed:
                 return {
