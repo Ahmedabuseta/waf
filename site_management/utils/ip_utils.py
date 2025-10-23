@@ -263,18 +263,9 @@ def normalize_ip(ip_address: str) -> Optional[str]:
         return None
 
 
-# Alternative geolocation providers (for fallback)
-
-def geolocate_ip_ipinfo(ip_address: str, token: Optional[str] = None) -> Dict[str, Optional[str]]:
+def geolocate_ip_ipwhois(ip_address: str) -> Dict[str, Optional[str]]:
     """
-    Geolocate IP using ipinfo.io (requires API token for higher limits)
-
-    Args:
-        ip_address: IP address to geolocate
-        token: Optional API token
-
-    Returns:
-        dict: Geolocation information
+    Geolocate IP using ipwhois.app (free, no token needed)
     """
     default_response = {
         'country': None,
@@ -283,47 +274,61 @@ def geolocate_ip_ipinfo(ip_address: str, token: Optional[str] = None) -> Dict[st
         'region': None,
         'latitude': None,
         'longitude': None,
+        'isp': None,
+        'org': None,
+        'asn': None,
+        'timezone': None,
         'error': None
     }
 
+    # Handle private IPs
     if is_private_ip(ip_address):
         return {**default_response, 'country': 'Local', 'country_code': 'XX', 'city': 'Local'}
 
+    url = f"https://ipwhois.app/json/{ip_address}"
+
     try:
-        url = f"https://ipwhois.app/json/{ip_address}"
-
-
         response = requests.get(url, timeout=5)
+        response.raise_for_status()  # Raises HTTPError for bad status
+        data = response.json()
 
-        if response.status_code == 200:
-            data = response.json()
+        # Check for API-level error
+        if not data.get("success", True):
+            error_msg = data.get("message", "Unknown error")
+            return {**default_response, 'error': error_msg}
 
-            # Parse location (lat,lon format)
-            loc = data.get('loc', '').split(',')
-            latitude = float(loc[0]) if len(loc) > 0 and loc[0] else None
-            longitude = float(loc[1]) if len(loc) > 1 and loc[1] else None
+        # Parse `loc` field: "30.0444,31.2357"
+        loc = data.get('loc', '')
+        latitude = longitude = None
+        if loc and ',' in loc:
+            parts = loc.split(',', 1)
+            try:
+                latitude = float(parts[0].strip())
+                longitude = float(parts[1].strip())
+            except (ValueError, IndexError):
+                pass  # Keep None if parsing fails
 
-            result = {
-                'country': str(data.get('country', 'Unknown')),
-                'country_code': str(data.get('country_code', 'XX')).upper(),
-                'city': str(data.get('city', 'Unknown')),
-                'region': str(data.get('region', 'Unknown')),
-                'latitude': float(data.get('latitude')) if data.get('latitude') else None,
-                'longitude': float(data.get('longitude')) if data.get('longitude') else None,
-                'isp': str(data.get('isp', 'Unknown')),
-                'org': str(data.get('org', 'Unknown')),
-                'asn': str(data.get('asn', 'Unknown')),
-                'timezone': str(data.get('timezone', 'Unknown')),
-                'error': None
-            }
-            return result
-        else:
-            return {**default_response, 'error': f'API returned status {response.status_code}'}
+        result = {
+            'country': str(data.get('country', 'Unknown')),
+            'country_code': str(data.get('country_code', 'XX')).upper(),
+            'city': str(data.get('city', 'Unknown')),
+            'region': str(data.get('region', 'Unknown')),
+            'latitude': latitude,
+            'longitude': longitude,
+            'isp': str(data.get('isp', 'Unknown')),
+            'org': str(data.get('org', 'Unknown')),
+            'asn': str(data.get('asn', 'Unknown')),
+            'timezone': str(data.get('timezone', 'Unknown')),
+            'error': None
+        }
+        return result
 
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Network error for {ip_address}: {e}")
+        return {**default_response, 'error': f"Request failed: {str(e)}"}
     except Exception as e:
-        logger.error(f"ipinfo.io error for {ip_address}: {str(e)}")
+        logger.error(f"Unexpected error for {ip_address}: {e}")
         return {**default_response, 'error': str(e)}
-
 
 def geolocate_ip_ipstack(ip_address: str, access_key: str) -> Dict[str, Optional[str]]:
     """
