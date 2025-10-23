@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Copy Button Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .test-section h2 {
+            margin-top: 0;
+            color: #555;
+            font-size: 18px;
+        }
+        .value-display {
+            background: #f8f8f8;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin: 10px 0;
+            word-break: break-all;
+        }
+        button {
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        .btn-blue {
+            background-color: #2563eb;
+            color: white;
+        }
+        .btn-blue:hover {
+            background-color: #1d4ed8;
+        }
+        .btn-green {
+            background-color: #16a34a;
+            color: white;
+        }
+        .btn-green:hover {
+            background-color: #15803d;
+        }
+        .btn-small {
+            padding: 4px 12px;
+            font-size: 12px;
+        }
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+        .status.success {
+            background-color: #d1fae5;
+            color: #065f46;
+            border: 1px solid #10b981;
+        }
+        .status.error {
+            background-color: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #ef4444;
+        }
+        .status.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Copy Button Functionality Test</h1>
+
+        <!-- Test 1: DNS TXT Record Name -->
+        <div class="test-section">
+            <h2>Test 1: Copy TXT Record Name</h2>
+            <div class="value-display">_acme-challenge.p2s.tech</div>
+            <button class="btn-blue" onclick="copyToClipboard('_acme-challenge.p2s.tech', event)">
+                📋 Copy Name
+            </button>
+            <div id="status1" class="status"></div>
+        </div>
+
+        <!-- Test 2: DNS TXT Record Value -->
+        <div class="test-section">
+            <h2>Test 2: Copy TXT Record Value</h2>
+            <div class="value-display">iLrJgVH3mA7KHGyUXtE5bQXuAQqyJJLYRWg_Lh59kj0</div>
+            <button class="btn-green" onclick="copyToClipboard('iLrJgVH3mA7KHGyUXtE5bQXuAQqyJJLYRWg_Lh59kj0', event)">
+                📋 Copy Value
+            </button>
+            <div id="status2" class="status"></div>
+        </div>
+
+        <!-- Test 3: Long Value -->
+        <div class="test-section">
+            <h2>Test 3: Copy Long Value</h2>
+            <div class="value-display">sPJc4iVCg-FMu6b-UTISFMg5_URMtjybNzfAH30APos_with_extra_long_content_to_test_wrapping</div>
+            <button class="btn-blue btn-small" onclick="copyToClipboard('sPJc4iVCg-FMu6b-UTISFMg5_URMtjybNzfAH30APos_with_extra_long_content_to_test_wrapping', event)">
+                📋 Copy
+            </button>
+            <div id="status3" class="status"></div>
+        </div>
+
+        <!-- Test 4: Special Characters -->
+        <div class="test-section">
+            <h2>Test 4: Copy with Special Characters</h2>
+            <div class="value-display">Test-Value_With.Special@Characters#2024!</div>
+            <button class="btn-green btn-small" onclick="copyToClipboard('Test-Value_With.Special@Characters#2024!', event)">
+                📋 Copy Special
+            </button>
+            <div id="status4" class="status"></div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="test-section" style="background-color: #fffbeb; border-color: #fbbf24;">
+            <h2>📝 How to Test</h2>
+            <ol style="margin: 10px 0; padding-left: 20px;">
+                <li>Click each copy button</li>
+                <li>Check that the button shows "✅ Copied!" for 2 seconds</li>
+                <li>Paste in a text editor to verify the copied content</li>
+                <li>Test in different browsers (Chrome, Firefox, Safari, Edge)</li>
+                <li>Test on mobile devices if possible</li>
+            </ol>
+            <p style="margin: 10px 0;"><strong>Expected behavior:</strong></p>
+            <ul style="margin: 10px 0; padding-left: 20px;">
+                <li>Button text changes to "✅ Copied!"</li>
+                <li>Button color changes to green</li>
+                <li>After 2 seconds, button returns to original state</li>
+                <li>Pasted text matches the displayed value exactly</li>
+            </ul>
+        </div>
+
+        <!-- Browser Info -->
+        <div class="test-section" style="background-color: #e0f2fe; border-color: #38bdf8;">
+            <h2>🌐 Browser Information</h2>
+            <div id="browser-info" style="font-family: monospace; font-size: 12px;"></div>
+        </div>
+    </div>
+
+    <script>
+        // Display browser info
+        document.getElementById('browser-info').innerHTML = `
+            User Agent: ${navigator.userAgent}<br>
+            Platform: ${navigator.platform}<br>
+            Clipboard API: ${navigator.clipboard ? '✅ Available' : '❌ Not Available'}<br>
+            Language: ${navigator.language}
+        `;
+
+        // Copy to clipboard function (same as in dns_challenge.html)
+        function copyToClipboard(text, event) {
+            // Ensure we have the event object
+            if (!event) {
+                event = window.event;
+            }
+
+            const button = event.target || event.currentTarget;
+
+            // Check if clipboard API is available
+            if (!navigator.clipboard) {
+                // Fallback for older browsers
+                fallbackCopyToClipboard(text, button);
+                return;
+            }
+
+            navigator.clipboard
+                .writeText(text)
+                .then(function () {
+                    // Show success message
+                    const originalText = button.innerHTML;
+                    const originalClass = button.className;
+
+                    // Change to success state
+                    button.innerHTML = "✅ Copied!";
+                    button.className = button.className
+                        .replace("bg-blue-600", "bg-green-600")
+                        .replace("bg-green-600", "bg-green-600")
+                        .replace("hover:bg-blue-700", "hover:bg-green-700")
+                        .replace("hover:bg-green-700", "hover:bg-green-700")
+                        .replace("text-blue-600", "text-green-600")
+                        .replace("text-green-600", "text-green-600")
+                        .replace("btn-blue", "btn-green");
+
+                    // Reset after 2 seconds
+                    setTimeout(() => {
+                        button.innerHTML = originalText;
+                        button.className = originalClass;
+                    }, 2000);
+                })
+                .catch(function (err) {
+                    console.error("Clipboard API failed:", err);
+                    fallbackCopyToClipboard(text, button);
+                });
+        }
+
+        function fallbackCopyToClipboard(text, button) {
+            // Fallback for older browsers or when clipboard API fails
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-999999px";
+            textArea.style.top = "-999999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            try {
+                const successful = document.execCommand("copy");
+                if (successful) {
+                    const originalText = button.innerHTML;
+                    button.innerHTML = "✅ Copied!";
+                    button.className = button.className.replace("btn-blue", "btn-green");
+                    setTimeout(() => {
+                        button.innerHTML = originalText;
+                        button.className = button.className.replace("btn-green", "btn-blue");
+                    }, 2000);
+                } else {
+                    alert("Failed to copy. Please copy manually:\n\n" + text);
+                }
+            } catch (err) {
+                console.error("Fallback copy failed:", err);
+                alert("Failed to copy. Please copy manually:\n\n" + text);
+            }
+
+            document.body.removeChild(textArea);
+        }
+    </script>
+</body>
+</html>

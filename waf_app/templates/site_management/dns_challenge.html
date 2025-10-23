@@ -396,7 +396,7 @@ site.host }} - WAF Management{% endblock %} {% block content %}
                                     >{{ record.name }}</code
                                 >
                                 <button
-                                    onclick="copyToClipboard('{{ record.name }}')"
+                                    onclick="copyToClipboard('{{ record.name }}', event)"
                                     class="flex-shrink-0 text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-xs font-medium transition-colors"
                                     title="Copy to clipboard"
                                 >
@@ -423,7 +423,7 @@ site.host }} - WAF Management{% endblock %} {% block content %}
                                     >{{ record.value }}</code
                                 >
                                 <button
-                                    onclick="copyToClipboard('{{ record.value }}')"
+                                    onclick="copyToClipboard('{{ record.value }}', event)"
                                     class="flex-shrink-0 text-white bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-xs font-medium transition-colors"
                                     title="Copy to clipboard"
                                 >
@@ -506,7 +506,7 @@ site.host }} - WAF Management{% endblock %} {% block content %}
                                 >{{ site.dns_challenge_key }}</code
                             >
                             <button
-                                onclick="copyToClipboard('{{ site.dns_challenge_key }}')"
+                                onclick="copyToClipboard('{{ site.dns_challenge_key }}', event)"
                                 class="ml-2 text-blue-600 dark:text-blue-400 hover:underline text-xs"
                             >
                                 📋 Copy
@@ -526,7 +526,7 @@ site.host }} - WAF Management{% endblock %} {% block content %}
                                     >{{ site.dns_challenge_value }}</code
                                 >
                                 <button
-                                    onclick="copyToClipboard('{{ site.dns_challenge_value }}')"
+                                    onclick="copyToClipboard('{{ site.dns_challenge_value }}', event)"
                                     class="text-blue-600 dark:text-blue-400 hover:underline text-xs"
                                 >
                                     📋 Copy
@@ -765,7 +765,7 @@ site.host }} - WAF Management{% endblock %} {% block content %}
                 >
                     <code>{{ step.command }}</code>
                     <button
-                        onclick="copyToClipboard('{{ step.command }}')"
+                        onclick="copyToClipboard('{{ step.command }}', event)"
                         class="ml-2 text-green-300 hover:text-green-200 text-xs"
                     >
                         Copy
@@ -1412,12 +1412,25 @@ site.host }} - WAF Management{% endblock %} {% block content %}
 {% endif %}
 
 <script>
-    function copyToClipboard(text) {
+    function copyToClipboard(text, event) {
+        // Ensure we have the event object
+        if (!event) {
+            event = window.event;
+        }
+
+        const button = event.target || event.currentTarget;
+
+        // Check if clipboard API is available
+        if (!navigator.clipboard) {
+            // Fallback for older browsers
+            fallbackCopyToClipboard(text, button);
+            return;
+        }
+
         navigator.clipboard
             .writeText(text)
             .then(function () {
                 // Show success message
-                const button = event.target;
                 const originalText = button.innerHTML;
                 const originalClass = button.className;
 
@@ -1427,7 +1440,9 @@ site.host }} - WAF Management{% endblock %} {% block content %}
                     .replace("bg-blue-600", "bg-green-600")
                     .replace("bg-green-600", "bg-green-600")
                     .replace("hover:bg-blue-700", "hover:bg-green-700")
-                    .replace("hover:bg-green-700", "hover:bg-green-700");
+                    .replace("hover:bg-green-700", "hover:bg-green-700")
+                    .replace("text-blue-600", "text-green-600")
+                    .replace("text-green-600", "text-green-600");
 
                 // Reset after 2 seconds
                 setTimeout(() => {
@@ -1436,26 +1451,39 @@ site.host }} - WAF Management{% endblock %} {% block content %}
                 }, 2000);
             })
             .catch(function (err) {
-                // Fallback for older browsers
-                const textArea = document.createElement("textarea");
-                textArea.value = text;
-                textArea.style.position = "fixed";
-                textArea.style.left = "-999999px";
-                document.body.appendChild(textArea);
-                textArea.select();
-                try {
-                    document.execCommand("copy");
-                    const button = event.target;
-                    const originalText = button.innerHTML;
-                    button.innerHTML = "✅ Copied!";
-                    setTimeout(() => {
-                        button.innerHTML = originalText;
-                    }, 2000);
-                } catch (err) {
-                    alert("Failed to copy. Please copy manually.");
-                }
-                document.body.removeChild(textArea);
+                console.error("Clipboard API failed:", err);
+                fallbackCopyToClipboard(text, button);
             });
+    }
+
+    function fallbackCopyToClipboard(text, button) {
+        // Fallback for older browsers or when clipboard API fails
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        try {
+            const successful = document.execCommand("copy");
+            if (successful) {
+                const originalText = button.innerHTML;
+                button.innerHTML = "✅ Copied!";
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                }, 2000);
+            } else {
+                alert("Failed to copy. Please copy manually:\n\n" + text);
+            }
+        } catch (err) {
+            console.error("Fallback copy failed:", err);
+            alert("Failed to copy. Please copy manually:\n\n" + text);
+        }
+
+        document.body.removeChild(textArea);
     }
 </script>
 

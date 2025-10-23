@@ -621,25 +621,48 @@ class CertificateManager:
 
             acme_sh_path = str(Path.home() / '.acme.sh' / 'acme.sh')
 
+            # CRITICAL: Check if acme.sh domain config exists
+            # The config is created when get_dns_txt_records_for_verification() runs
+            # If it doesn't exist, the TXT records in DNS are stale/invalid
+            acme_domain_dir = Path.home() / '.acme.sh' / domain
+            acme_domain_conf = acme_domain_dir / f"{domain}.conf"
+
+            if not acme_domain_conf.exists():
+                print("❌ acme.sh domain configuration not found!")
+                print(f"   Expected: {acme_domain_conf}")
+                print(f"   This means the TXT records currently in DNS are stale.")
+                print(f"\n   ACTION REQUIRED:")
+                print(f"   1. Click 'Get TXT Records from acme.sh' to generate FRESH records")
+                print(f"   2. Update your DNS with the NEW TXT record values")
+                print(f"   3. Wait 5-10 minutes for DNS propagation")
+                print(f"   4. Then click 'Verify DNS & Generate Certificate' again")
+                return {
+                    "success": False,
+                    "error": (
+                        "acme.sh domain configuration not found. The TXT records in DNS are stale. "
+                        "Please regenerate TXT records using 'Get TXT Records from acme.sh' button, "
+                        "then update your DNS with the NEW values before attempting verification again."
+                    ),
+                    "verification_details": verification_details
+                }
+
+            print("🔄 Completing acme.sh certificate generation...")
+            print(f"   Using --renew to complete the pending dns_manual challenge")
+            print(f"   Domain config: {acme_domain_conf}")
+
             acme_cmd = [
-                acme_sh_path, '--issue',
-                '--dns', 'dns_manual',
+                acme_sh_path, '--renew',
                 '-d', domain,
-                '-d', wildcard_domain,
-                '--email', email,
-                '--keylength', '2048',
-                '--server', 'letsencrypt',
                 '--yes-I-know-dns-manual-mode-enough-go-ahead-please'
             ]
 
             if staging:
                 acme_cmd.append('--staging')
 
-            print("🔄 Running acme.sh to generate certificate...")
-            # Send 'y' to proceed with verification
+            print(f"   Command: {' '.join(acme_cmd)}")
+
             result = subprocess.run(
                 acme_cmd,
-                input='y\n',
                 capture_output=True,
                 text=True,
                 timeout=300
