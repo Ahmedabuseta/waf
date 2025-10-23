@@ -141,7 +141,7 @@ class WAFMiddleware(MiddlewareMixin):
 
             # Geolocate IP
             geo_data = geolocate_ip(ip_address)
-
+            print(geo_data)
             # Create analytics record
             RequestAnalytics.objects.create(
                 site=site,
@@ -199,6 +199,7 @@ class WAFMiddleware(MiddlewareMixin):
         except Site.DoesNotExist:
             # No fallback: avoid mis-attributing requests to wrong site
             return None
+
 
     def _prepare_request_data(self, request):
         """Prepare request data for rule engine evaluation"""
