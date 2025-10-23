@@ -391,6 +391,7 @@ def toggle_auto_ssl(request, site_slug):
 def dns_challenge_page(request, site_slug):
     """
     Display DNS challenge instructions for wildcard certificates
+    Uses acme.sh to extract TXT records and allows user to verify when ready
     """
     site = get_object_or_404(Site, slug=site_slug)
     ssl_helper = get_ssl_helper()
@@ -401,118 +402,131 @@ def dns_challenge_page(request, site_slug):
         messages.info(request, 'DNS challenge not required for this site configuration')
         return redirect('site_detail', slug=site_slug)
 
-    # Generate or refresh challenge if needed
-    if request.method == 'POST' and request.POST.get('action') == 'generate_challenge':
-        # Generate new challenge
-        challenge_data = acme_manager.generate_challenge_value(site.host)
-        site.dns_challenge_key = challenge_data['key']
-        site.dns_challenge_value = challenge_data['value']
-        site.dns_challenge_created_at = timezone.now()
-        site.save(update_fields=['dns_challenge_key', 'dns_challenge_value', 'dns_challenge_created_at'])
-        messages.success(request, 'New DNS challenge generated successfully!')
-        return redirect('dns_challenge', slug=site_slug)
+    # Initialize certificate manager
+    from site_management.utils.certificate_manager import CertificateManager
+    cert_manager = CertificateManager()
 
-    # Clear challenge if requested
-    if request.method == 'POST' and request.POST.get('action') == 'clear_challenge':
-        site.clear_dns_challenge()
-        messages.info(request, 'DNS challenge cleared successfully!')
-        return redirect('dns_challenge', slug=site_slug)
+    # Get email from site or use default
+    email = getattr(site, 'ssl_email', 'ahmed.a.abuseta@gmail.com')
 
-    # Check if we need to generate a new challenge
-    if not site.has_dns_challenge() or site.is_dns_challenge_expired():
-        # Generate new challenge automatically
-        challenge_data = acme_manager.generate_challenge_value(site.host)
-        site.dns_challenge_key = challenge_data['key']
-        site.dns_challenge_value = challenge_data['value']
-        site.dns_challenge_created_at = timezone.now()
-        site.save(update_fields=['dns_challenge_key', 'dns_challenge_value', 'dns_challenge_created_at'])
-
-    # Get DNS challenge instructions with actual challenge value
-    instructions = acme_manager.generate_challenge_instructions(
-        domain=site.host,
-        support_subdomains=site.support_subdomains,
-        challenge_value=site.dns_challenge_value
-    )
-
-    # Format for HTML display
-    html_instructions = ssl_helper.format_dns_instructions_html(instructions)
-
-    # Check if verification was requested
+    # Handle different actions
+    txt_records_data = None
     verification_result = None
     propagation_result = None
 
     if request.method == 'POST':
         action = request.POST.get('action')
-        expected_value = request.POST.get('expected_value', '')
 
-        if action == 'verify':
-            # Use stored challenge value if no value provided
-            verify_value = expected_value if expected_value else site.dns_challenge_value
-            if verify_value:
-                verification_result = acme_manager.verify_dns_challenge_record(
+        if action == 'generate_challenge':
+            # Get TXT records from acme.sh
+            txt_result = cert_manager.get_dns_txt_records_for_verification(
+                domain=site.host,
+                email=email,
+                staging=False  # Set to True for testing
+            )
+
+            if txt_result.get('success'):
+                # Store TXT records in session for later verification
+                txt_records = txt_result.get('txt_records', [])
+                request.session['txt_records'] = txt_records
+
+                # Store first record in site model for display
+                if txt_records:
+                    site.dns_challenge_key = txt_records[0].get('name', '')
+                    site.dns_challenge_value = txt_records[0].get('value', '')
+                    site.dns_challenge_created_at = timezone.now()
+                    site.save(update_fields=['dns_challenge_key', 'dns_challenge_value', 'dns_challenge_created_at'])
+
+                txt_records_data = txt_result
+                messages.success(request, 'DNS TXT records extracted successfully! Please add them to your DNS provider.')
+            else:
+                messages.error(request, f'Failed to get TXT records: {txt_result.get("error")}')
+                return redirect('dns_challenge', slug=site_slug)
+
+        elif action == 'verify':
+            # Get TXT records from session or site
+            txt_records = request.session.get('txt_records', [])
+
+            # If no records in session, try to reconstruct from site
+            if not txt_records and site.has_dns_challenge():
+                txt_records = [{
+                    'name': site.dns_challenge_key,
+                    'value': site.dns_challenge_value
+                }]
+
+            if txt_records:
+                # Verify DNS and generate certificate
+                cert_result = cert_manager.verify_dns_challenge_and_generate_cert(
                     domain=site.host,
-                    expected_value=verify_value
+                    email=email,
+                    txt_records=txt_records,
+                    staging=False  # Set to True for testing
                 )
 
-                # If DNS verification is successful, generate wildcard certificate
-                if verification_result.get('exists') and verification_result.get('matched'):
-                    messages.success(request, 'DNS verification successful! Generating wildcard certificate...')
+                if cert_result.get('success'):
+                    # Update site with certificate paths
+                    site.ssl_cert_path = cert_result.get('cert_path')
+                    site.ssl_key_path = cert_result.get('key_path')
 
-                    # Generate wildcard certificate using new web-based flow
-                    from site_management.utils.certificate_manager import CertificateManager
-                    cert_manager = CertificateManager()
+                    # Clear DNS challenge and session data
+                    site.clear_dns_challenge()
+                    site.save()
+                    if 'txt_records' in request.session:
+                        del request.session['txt_records']
 
-                    # Get email from site or use default
-                    email = getattr(site, 'ssl_email', 'ahmed.a.abuseta@gmail.com')
-
-                    # Use the new web-based certificate generation method
-                    cert_result = cert_manager.verify_dns_challenge_and_generate_cert(
-                        domain=site.host,
-                        email=email,
-                        challenge_value=verify_value,
-                        staging=False  # Set to True for testing
-                    )
-
-                    if cert_result.get('success'):
-                        # Update site with certificate paths
-                        site.ssl_cert_path = cert_result.get('cert_path')
-                        site.ssl_key_path = cert_result.get('key_path')
-
-                        # Clear DNS challenge after successful generation
-                        site.clear_dns_challenge()
-                        site.save()
-
-                        success_msg = f'✅ Wildcard certificate generated successfully for {site.host} and *.{site.host}!'
-                        if cert_result.get('caddy_updated'):
-                            success_msg += ' Caddyfile has been updated and reloaded.'
-                        else:
-                            success_msg += ' Warning: Caddyfile may need manual update.'
-
-                        messages.success(request, success_msg)
-
-                        # Redirect to site detail to show updated configuration
-                        return redirect('site_detail', slug=site_slug)
+                    success_msg = f'✅ Wildcard certificate generated successfully for {site.host} and *.{site.host}!'
+                    if cert_result.get('caddy_updated'):
+                        success_msg += ' Caddyfile has been updated and reloaded.'
                     else:
-                        messages.error(request, f'Failed to generate certificate: {cert_result.get("error")}')
+                        success_msg += ' Warning: Caddyfile may need manual update.'
+
+                    messages.success(request, success_msg)
+                    return redirect('site_detail', slug=site_slug)
                 else:
-                    # DNS verification failed
-                    if verification_result.get('exists'):
-                        messages.error(request, f'DNS record found but value does not match. Expected: {verify_value}')
-                    else:
-                        messages.error(request, 'DNS TXT record not found. Please ensure you have added the record to your DNS provider and wait for propagation.')
+                    messages.error(request, f'Failed to generate certificate: {cert_result.get("error")}')
+                    verification_result = cert_result.get('verification_details', [])
             else:
-                messages.warning(request, 'No challenge value provided for verification')
+                messages.warning(request, 'No TXT records found. Please generate challenge first.')
 
         elif action == 'check_propagation':
-            # Use stored challenge value if no value provided
-            check_value = expected_value if expected_value else site.dns_challenge_value
-            if check_value:
+            # Check DNS propagation for stored records
+            if site.has_dns_challenge():
                 propagation_result = acme_manager.check_dns_propagation(
                     domain=site.host,
-                    expected_value=check_value
+                    expected_value=site.dns_challenge_value
                 )
             else:
-                messages.warning(request, 'No challenge value provided for propagation check')
+                messages.warning(request, 'No DNS challenge found. Please generate challenge first.')
+
+        elif action == 'clear_challenge':
+            site.clear_dns_challenge()
+            if 'txt_records' in request.session:
+                del request.session['txt_records']
+            messages.info(request, 'DNS challenge cleared successfully!')
+            return redirect('dns_challenge', slug=site_slug)
+
+    # Get stored TXT records from session if available
+    if not txt_records_data and 'txt_records' in request.session:
+        txt_records = request.session.get('txt_records', [])
+        if txt_records:
+            instructions = cert_manager._format_dns_instructions(site.host, txt_records)
+            txt_records_data = {
+                'success': True,
+                'txt_records': txt_records,
+                'instructions': instructions
+            }
+
+    # Fallback to old method if no TXT records data
+    if not txt_records_data and site.has_dns_challenge():
+        instructions = acme_manager.generate_challenge_instructions(
+            domain=site.host,
+            support_subdomains=site.support_subdomains,
+            challenge_value=site.dns_challenge_value
+        )
+        html_instructions = ssl_helper.format_dns_instructions_html(instructions)
+    else:
+        instructions = txt_records_data.get('instructions', '') if txt_records_data else ''
+        html_instructions = instructions.replace('\n', '<br>')
 
     context = {
         'site': site,

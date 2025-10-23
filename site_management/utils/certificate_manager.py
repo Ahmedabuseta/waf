@@ -429,80 +429,159 @@ class CertificateManager:
                 "error": f"Error generating wildcard certificate: {e}"
             }
 
-    def generate_dns_challenge_for_web(self, domain: str, support_subdomains: bool = True) -> Dict:
+    def get_dns_txt_records_for_verification(self, domain: str, email: str,
+                                             staging: bool = False) -> Dict:
         """
-        Generate DNS challenge for web-based manual verification flow
-        Returns challenge data that can be displayed to user
+        Get DNS TXT records from acme.sh without completing the challenge
+        This extracts the TXT records that user needs to add to their DNS
 
-        This is step 1 of the web flow:
-        1. Generate challenge and show to user
-        2. User adds TXT record to their DNS
-        3. User clicks verify button
-        4. System verifies DNS record exists
-        5. System generates certificate using acme.sh
-        6. System updates Caddyfile
+        Returns:
+            Dict with:
+            - success: bool
+            - txt_records: List[Dict] with record_name and record_value
+            - instructions: str with formatted instructions
+            - error: str if failed
         """
         try:
-            challenge_data = self.acme_manager.generate_challenge_value(domain)
+            print(f"🔍 Getting DNS TXT records for {domain}...")
 
-            # Generate instructions for the user
-            instructions = self.acme_manager.generate_challenge_instructions(
-                domain=domain,
-                support_subdomains=support_subdomains,
-                challenge_value=challenge_data['value']
+            # Check if acme.sh is available
+            if not self._check_acme_sh_available():
+                return {
+                    "success": False,
+                    "error": "acme.sh is not installed. Please install it first:\n  curl https://get.acme.sh | sh"
+                }
+
+            wildcard_domain = f"*.{domain}"
+            acme_sh_path = str(Path.home() / '.acme.sh' / 'acme.sh')
+
+            # Build acme.sh command to get DNS records
+            acme_cmd = [
+                acme_sh_path, '--issue',
+                '--dns', 'dns_manual',
+                '-d', domain,
+                '-d', wildcard_domain,
+                '--email', email,
+                '--keylength', '2048',
+                '--server', 'letsencrypt',
+                '--yes-I-know-dns-manual-mode-enough-go-ahead-please'
+            ]
+
+            if staging:
+                acme_cmd.append('--staging')
+
+            print("🔄 Running acme.sh to get TXT records...")
+
+            # Run acme.sh with timeout, send 'n' to decline verification immediately
+            # This way we get the TXT records but don't complete the challenge
+            result = subprocess.run(
+                acme_cmd,
+                input='n\n',  # Send 'n' to decline proceeding
+                capture_output=True,
+                text=True,
+                timeout=60
             )
+
+            # Extract TXT records from output
+            txt_records = self._extract_txt_records_from_acme_output(result.stdout)
+
+            if not txt_records:
+                return {
+                    "success": False,
+                    "error": "Could not extract TXT records from acme.sh output. Output:\n" + result.stdout
+                }
+
+            # Generate formatted instructions
+            instructions = self._format_dns_instructions(domain, txt_records)
 
             return {
                 "success": True,
-                "challenge_key": challenge_data['key'],
-                "challenge_value": challenge_data['value'],
+                "txt_records": txt_records,
                 "instructions": instructions,
                 "domain": domain,
-                "support_subdomains": support_subdomains
+                "wildcard_domain": wildcard_domain
+            }
+
+        except subprocess.TimeoutExpired:
+            return {
+                "success": False,
+                "error": "Failed to get TXT records (timeout)"
             }
         except Exception as e:
             return {
                 "success": False,
-                "error": f"Failed to generate DNS challenge: {e}"
+                "error": f"Error getting DNS TXT records: {str(e)}"
             }
 
     def verify_dns_challenge_and_generate_cert(self, domain: str, email: str,
-                                               challenge_value: str,
+                                               txt_records: List[Dict] = None,
                                                staging: bool = False) -> Dict:
         """
-        Verify DNS challenge and generate certificate if verification passes
+        Web-based certificate generation with DNS verification
 
-        This is step 2 of the web flow (after user clicks verify):
-        1. Verify DNS TXT record exists with correct value
+        This method is for WEB INTERFACE use:
+        1. Verify DNS TXT records exist with correct values
         2. If verified, generate certificate with acme.sh
         3. Install certificate to domain directory
         4. Update Caddyfile with new certificate
         5. Return results
+
+        Args:
+            domain: Base domain (e.g., example.com)
+            email: Email for Let's Encrypt registration
+            txt_records: List of TXT records to verify [{"name": "...", "value": "..."}]
+            staging: Use staging environment
         """
         try:
-            print(f"🔍 Verifying DNS challenge for {domain}...")
+            print(f"🔍 Verifying DNS challenges for {domain}...")
 
-            # Step 1: Verify DNS record
-            verification_result = self.acme_manager.verify_dns_challenge_record(
-                domain=domain,
-                expected_value=challenge_value
-            )
+            # If txt_records not provided, get them first
+            if not txt_records:
+                records_result = self.get_dns_txt_records_for_verification(domain, email, staging)
+                if not records_result.get('success'):
+                    return records_result
+                txt_records = records_result.get('txt_records', [])
 
-            if not verification_result.get('exists'):
+            # Step 1: Verify all DNS records
+            verification_failed = False
+            verification_details = []
+
+            for record in txt_records:
+                record_name = record.get('name', '')
+                record_value = record.get('value', '')
+
+                # Extract just the subdomain part for verification
+                # _acme-challenge.example.com -> check _acme-challenge.example.com
+                verification_result = self.acme_manager.verify_dns_challenge_record(
+                    domain=domain,
+                    expected_value=record_value
+                )
+
+                verification_details.append({
+                    "record_name": record_name,
+                    "record_value": record_value,
+                    "exists": verification_result.get('exists'),
+                    "matched": verification_result.get('matched'),
+                    "found_value": verification_result.get('found_value')
+                })
+
+                if not verification_result.get('exists'):
+                    verification_failed = True
+                    print(f"❌ DNS TXT record not found: {record_name}")
+                elif not verification_result.get('matched'):
+                    verification_failed = True
+                    print(f"❌ DNS TXT record value mismatch for: {record_name}")
+                else:
+                    print(f"✅ DNS TXT record verified: {record_name}")
+
+            if verification_failed:
                 return {
                     "success": False,
-                    "error": "DNS TXT record not found. Please ensure you've added the record to your DNS provider.",
-                    "verification_result": verification_result
+                    "error": "DNS TXT record verification failed. Please ensure all records are added correctly and DNS has propagated.",
+                    "verification_details": verification_details
                 }
 
-            if not verification_result.get('matched'):
-                return {
-                    "success": False,
-                    "error": f"DNS TXT record exists but value doesn't match. Expected: {challenge_value}, Found: {verification_result.get('found_value')}",
-                    "verification_result": verification_result
-                }
-
-            print("✅ DNS challenge verified successfully!")
+            print("✅ All DNS challenges verified successfully!")
 
             # Step 2: Generate certificate using acme.sh
             print(f"🔐 Generating wildcard certificate for {domain}...")
@@ -511,7 +590,6 @@ class CertificateManager:
             domain_dir = self.certs_dir / domain
             domain_dir.mkdir(parents=True, exist_ok=True)
 
-            # Build and execute acme.sh command
             acme_sh_path = str(Path.home() / '.acme.sh' / 'acme.sh')
 
             acme_cmd = [
@@ -529,8 +607,10 @@ class CertificateManager:
                 acme_cmd.append('--staging')
 
             print("🔄 Running acme.sh to generate certificate...")
+            # Send 'y' to proceed with verification
             result = subprocess.run(
                 acme_cmd,
+                input='y\n',
                 capture_output=True,
                 text=True,
                 timeout=300
@@ -544,32 +624,35 @@ class CertificateManager:
                     return {
                         "success": False,
                         "error": f"acme.sh failed: {result.stderr or result.stdout}",
-                        "verification_result": verification_result
+                        "verification_details": verification_details
                     }
+
+            print("✅ acme.sh completed successfully!")
 
             # Step 3: Copy certificates to domain directory
             if not self._copy_acme_certificates_to_domain_dir(domain, domain_dir):
                 return {
                     "success": False,
                     "error": "Failed to copy certificates from acme.sh directory",
-                    "verification_result": verification_result
+                    "verification_details": verification_details
                 }
 
             cert_path = domain_dir / "cert.pem"
             key_path = domain_dir / "key.pem"
 
             # Step 4: Verify installed certificate
+            print(f"🔍 Verifying certificate...")
             if not self._verify_wildcard_certificate(str(cert_path), domain):
                 return {
                     "success": False,
                     "error": "Certificate verification failed after installation",
-                    "verification_result": verification_result
+                    "verification_details": verification_details
                 }
 
-            print("✅ Certificate generated and verified successfully!")
+            print("✅ Certificate verification passed!")
 
             # Step 5: Update Caddyfile
-            print("📝 Updating Caddyfile with new certificate...")
+            print("📝 Updating Caddyfile configuration...")
             caddy_result = self._update_caddyfile_with_certificate(
                 domain, str(cert_path), str(key_path)
             )
@@ -585,7 +668,7 @@ class CertificateManager:
                 "success": True,
                 "cert_path": str(cert_path),
                 "key_path": str(key_path),
-                "verification_result": verification_result,
+                "verification_details": verification_details,
                 "caddy_updated": caddy_result.get("success", False),
                 "caddy_message": caddy_result.get("message", ""),
                 "message": f"Wildcard certificate successfully generated for {domain} and *.{domain}"
@@ -595,6 +678,173 @@ class CertificateManager:
             return {
                 "success": False,
                 "error": "Certificate generation timed out. Please try again."
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Error during certificate generation: {str(e)}"
+            }
+
+    def generate_wildcard_cert_interactive(self, domain: str, email: str,
+                                          staging: bool = False) -> Dict:
+        """
+        Generate wildcard certificate using acme.sh dns_manual interactive mode
+
+        This method is for CLI/COMMAND LINE use:
+        This runs acme.sh which will:
+        1. Display the TXT records that need to be added
+        2. Wait for user to press Enter after adding records
+        3. Verify DNS records
+        4. Generate certificate
+        5. Install certificate to domain directory
+        6. Update Caddyfile
+
+        This method is designed to be called from CLI and will interact with user directly
+        """
+        try:
+            print(f"🔐 Generating wildcard certificate for {domain}")
+            print(f"📧 Using email: {email}")
+            print()
+
+            # Check if acme.sh is available
+            if not self._check_acme_sh_available():
+                return {
+                    "success": False,
+                    "error": "acme.sh is not installed. Please install it first:\n  curl https://get.acme.sh | sh"
+                }
+
+            wildcard_domain = f"*.{domain}"
+            domain_dir = self.certs_dir / domain
+            domain_dir.mkdir(parents=True, exist_ok=True)
+
+            # Build acme.sh command for interactive dns_manual mode
+            acme_sh_path = str(Path.home() / '.acme.sh' / 'acme.sh')
+
+            acme_cmd = [
+                acme_sh_path, '--issue',
+                '--dns', 'dns_manual',
+                '-d', domain,
+                '-d', wildcard_domain,
+                '--email', email,
+                '--keylength', '2048',
+                '--server', 'letsencrypt',
+                '--yes-I-know-dns-manual-mode-enough-go-ahead-please'
+            ]
+
+            if staging:
+                acme_cmd.append('--staging')
+                print("⚠️  Using Let's Encrypt STAGING environment (for testing)")
+                print()
+
+            print("=" * 70)
+            print("🔄 Starting acme.sh certificate generation process...")
+            print("=" * 70)
+            print()
+            print("📝 acme.sh will now:")
+            print("   1. Show you the TXT records to add to your DNS")
+            print("   2. Wait for you to add them")
+            print("   3. Ask you to press Enter when ready")
+            print("   4. Verify the DNS records")
+            print("   5. Generate the certificate")
+            print()
+            print("⏳ Please wait for acme.sh instructions...")
+            print("=" * 70)
+            print()
+
+            # Run acme.sh interactively (user will see output and interact with it)
+            result = subprocess.run(
+                acme_cmd,
+                text=True,
+                stdin=None,  # Use terminal stdin for user interaction
+                timeout=600  # 10 minute timeout
+            )
+
+            print()
+            print("=" * 70)
+
+            if result.returncode != 0:
+                # Check if certificate already exists
+                print("❌ acme.sh command failed")
+                return {
+                    "success": False,
+                    "error": "Certificate generation failed. Please check the output above."
+                }
+
+            print("✅ acme.sh completed successfully!")
+            print("=" * 70)
+            print()
+
+            # Copy certificates to domain directory
+            print(f"📦 Installing certificate to {domain_dir}...")
+            if not self._copy_acme_certificates_to_domain_dir(domain, domain_dir):
+                return {
+                    "success": False,
+                    "error": "Failed to copy certificates from acme.sh directory"
+                }
+
+            cert_path = domain_dir / "cert.pem"
+            key_path = domain_dir / "key.pem"
+
+            # Verify installed certificate
+            print(f"🔍 Verifying certificate...")
+            if not self._verify_wildcard_certificate(str(cert_path), domain):
+                return {
+                    "success": False,
+                    "error": "Certificate verification failed after installation"
+                }
+
+            print("✅ Certificate verification passed!")
+            print()
+
+            # Update Caddyfile
+            print("📝 Updating Caddyfile configuration...")
+            caddy_result = self._update_caddyfile_with_certificate(
+                domain, str(cert_path), str(key_path)
+            )
+
+            if caddy_result.get("success"):
+                print(f"✅ Caddyfile updated: {caddy_result.get('config_path')}")
+                print("✅ Caddy reloaded successfully")
+            else:
+                print(f"⚠️  Warning: {caddy_result.get('error')}")
+                print("   You may need to manually update Caddyfile and reload Caddy")
+
+            # Log the operation
+            if self.logger:
+                cert_info = self.checker.check_certificate_domains(str(cert_path))
+                self.logger.log_certificate_operation(
+                    domain, "generate_wildcard_interactive", cert_info, True
+                )
+
+            print()
+            print("=" * 70)
+            print("🎉 SUCCESS! Wildcard certificate generated and installed!")
+            print("=" * 70)
+            print(f"📄 Certificate: {cert_path}")
+            print(f"🔑 Private Key: {key_path}")
+            print(f"🌐 Covers: {domain} and *.{domain}")
+            print("=" * 70)
+            print()
+
+            return {
+                "success": True,
+                "cert_path": str(cert_path),
+                "key_path": str(key_path),
+                "domain": domain,
+                "caddy_updated": caddy_result.get("success", False),
+                "message": f"Wildcard certificate successfully generated for {domain} and *.{domain}"
+            }
+
+        except subprocess.TimeoutExpired:
+            return {
+                "success": False,
+                "error": "Certificate generation timed out after 10 minutes. Please try again."
+            }
+        except KeyboardInterrupt:
+            print("\n\n⚠️  Certificate generation cancelled by user")
+            return {
+                "success": False,
+                "error": "Certificate generation cancelled by user"
             }
         except Exception as e:
             return {
@@ -740,6 +990,76 @@ class CertificateManager:
         except Exception as e:
             print(f"   ❌ Certificate verification error: {e}")
             return False
+
+    def _extract_txt_records_from_acme_output(self, output: str) -> List[Dict]:
+        """
+        Extract TXT record information from acme.sh output
+
+        acme.sh output looks like:
+        Add the following TXT record:
+        Domain: '_acme-challenge.example.com'
+        TXT value: 'xxxxxxxxxxxxxxxxxxxxxx'
+        """
+        txt_records = []
+        lines = output.split('\n')
+
+        i = 0
+        while i < len(lines):
+            line = lines[i].strip()
+
+            # Look for domain line
+            if "Domain:" in line and "_acme-challenge" in line:
+                # Extract domain name
+                domain_match = re.search(r"Domain:\s*'?([^'\"]+)'?", line)
+                if domain_match:
+                    domain_name = domain_match.group(1).strip()
+
+                    # Look for TXT value in next few lines
+                    for j in range(i+1, min(i+5, len(lines))):
+                        value_line = lines[j].strip()
+                        if "TXT value:" in value_line:
+                            value_match = re.search(r"TXT value:\s*'?([^'\"]+)'?", value_line)
+                            if value_match:
+                                txt_value = value_match.group(1).strip()
+                                txt_records.append({
+                                    "name": domain_name,
+                                    "value": txt_value
+                                })
+                                break
+            i += 1
+
+        return txt_records
+
+    def _format_dns_instructions(self, domain: str, txt_records: List[Dict]) -> str:
+        """Format DNS instructions for display to user"""
+        instructions = f"""
+DNS TXT Records Required for {domain}
+{'=' * 70}
+
+Please add the following TXT record(s) to your DNS provider:
+"""
+        for idx, record in enumerate(txt_records, 1):
+            instructions += f"""
+Record #{idx}:
+  Name/Host: {record['name']}
+  Type: TXT
+  Value: {record['value']}
+  TTL: 300 (or Auto)
+"""
+
+        instructions += f"""
+{'=' * 70}
+
+Instructions:
+1. Log in to your DNS provider (Cloudflare, Route53, etc.)
+2. Add the TXT record(s) shown above
+3. Wait 5-10 minutes for DNS propagation
+4. Click 'Verify DNS Records' button to continue
+
+To check if DNS has propagated, run:
+  dig TXT {txt_records[0]['name'] if txt_records else '_acme-challenge.' + domain}
+"""
+        return instructions
 
     def _update_caddyfile_with_certificate(self, domain: str, cert_path: str, key_path: str) -> Dict:
         """
@@ -927,24 +1247,27 @@ def main():
             %(prog)s acme-wildcard example.com admin@example.com       # Generate wildcard cert with acme.sh
             %(prog)s acme-wildcard example.com admin@example.com --dns-provider cloudflare --staging  # Use staging environment
 
-            Wildcard Certificate Generation:
+            Wildcard Certificate Generation (Interactive Mode):
             The acme-wildcard command generates certificates that cover both the base domain
-            and all its subdomains (*.domain.com). Requires acme.sh and DNS provider API access.
+            and all its subdomains (*.domain.com) using acme.sh dns_manual interactive mode.
+
+            The process will:
+            1. Display TXT records that need to be added to your DNS
+            2. Wait for you to add the records
+            3. Ask you to press Enter when ready
+            4. Verify DNS records and generate certificate
+            5. Install certificate and update Caddyfile
 
             Prerequisites:
             - Install acme.sh: curl https://get.acme.sh | sh
-            - Configure DNS provider credentials (see acme.sh documentation)
+            - Access to your DNS provider to add TXT records
 
             Examples:
-                # Cloudflare (set CF_Token and CF_Account_ID environment variables)
-                export CF_Token="your_cloudflare_api_token"
-                export CF_Account_ID="your_cloudflare_account_id"
-                %(prog)s acme-wildcard example.com admin@example.com --dns-provider cloudflare
+                # Generate wildcard certificate (production)
+                %(prog)s acme-wildcard example.com admin@example.com
 
-                # Route53 (set AWS credentials)
-                export AWS_ACCESS_KEY_ID="your_aws_key"
-                export AWS_SECRET_ACCESS_KEY="your_aws_secret"
-                %(prog)s acme-wildcard example.com admin@example.com --dns-provider route53
+                # Test with staging environment (recommended for first try)
+                %(prog)s acme-wildcard example.com admin@example.com --staging
                     """
     )
 
@@ -993,13 +1316,11 @@ def main():
     backup_parser = subparsers.add_parser('backup', help='Backup all certificates')
     backup_parser.add_argument('backup_path', help='Path to backup directory')
 
-    # Generate wildcard certificate with acme.sh
-    acme_parser = subparsers.add_parser('acme-wildcard', help='Generate wildcard certificate using acme.sh')
+    # Generate wildcard certificate with acme.sh (interactive mode)
+    acme_parser = subparsers.add_parser('acme-wildcard', help='Generate wildcard certificate using acme.sh (interactive DNS manual mode)')
     acme_parser.add_argument('domain', help='Base domain name (e.g., example.com)')
     acme_parser.add_argument('email', help='Email address for Let\'s Encrypt registration')
-    acme_parser.add_argument('--dns-provider', default='cloudflare', help='DNS provider for validation (default: cloudflare)')
     acme_parser.add_argument('--staging', action='store_true', help='Use Let\'s Encrypt staging environment for testing')
-    acme_parser.add_argument('--force-renew', action='store_true', help='Force renewal even if certificate exists')
 
     args = parser.parse_args()
 
@@ -1040,9 +1361,12 @@ def main():
     elif args.command == 'backup':
         success = cert_manager.backup_certificates(args.backup_path)
     elif args.command == 'acme-wildcard':
-        success = cert_manager.generate_wildcard_certificate_acme(
-            args.domain, args.email, args.dns_provider, args.staging, args.force_renew
+        result = cert_manager.generate_wildcard_cert_interactive(
+            args.domain, args.email, args.staging
         )
+        success = result.get('success', False)
+        if not success and result.get('error'):
+            print(f"\n❌ Error: {result['error']}")
     else:
         parser.print_help()
         return 1
