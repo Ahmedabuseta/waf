@@ -139,7 +139,7 @@ const v = "script"
       xss: {
           url: "https://{{ site.host }}/comment",
           method: "POST",
-          body: {"comment": `<script>alert(\'XSS\')</${v}>`}
+          body: {"comment": `<script>alert('XSS')</${v}>`}
       },
       path: {
           url: "https://{{ site.host }}/files?path=../../etc/passwd",
@@ -169,18 +169,7 @@ const v = "script"
 
       const url = document.getElementById('testUrl').value;
       const method = document.getElementById('testMethod').value;
-      let body = document.getElementById('testBody').value;
-
-      // Try to parse body as JSON if it's not empty
-      let parsedBody = body;
-      if (body && body.trim()) {
-          try {
-              parsedBody = JSON.parse(body);
-          } catch (e) {
-              // If it's not valid JSON, use as string
-              parsedBody = body;
-          }
-      }
+      const body = document.getElementById('testBody').value;
 
       // Parse URL to get path and params
       let path = '/';
@@ -200,7 +189,7 @@ const v = "script"
           path: path,
           method: method,
           params: params,
-          body: parsedBody,
+          body: body,
           headers: {}
       };
 
@@ -211,7 +200,7 @@ const v = "script"
               .find(row => row.startsWith('csrftoken='))
               ?.split('=')[1];
 
-          const response = await fetch('/sites/{{ site.slug }}/rules/test/', {
+          const response = await fetch('/sites/{{ site.slug }}/rules/test-api/', {
               method: 'POST',
               headers: {
                   'Content-Type': 'application/json',
@@ -220,9 +209,21 @@ const v = "script"
               body: JSON.stringify(testData)
           });
 
+          if (!response.ok) {
+              const errorText = await response.text();
+              throw new Error(`Server error (${response.status}): ${errorText.substring(0, 100)}`);
+          }
+
+          const contentType = response.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+              const text = await response.text();
+              throw new Error('Server returned non-JSON response: ' + text.substring(0, 100));
+          }
+
           const result = await response.json();
           displayResults(result);
       } catch (error) {
+          console.error('Test error:', error);
           alert('Error: ' + error.message);
       }
   });

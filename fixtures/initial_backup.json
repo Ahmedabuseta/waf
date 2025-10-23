@@ -1,0 +1,160 @@
+[
+{
+  "model": "site_management.site",
+  "pk": 1,
+  "fields": {
+    "host": "p2s.tech",
+    "status": "active",
+    "support_subdomains": true,
+    "auto_ssl": true,
+    "protocol": "https",
+    "ssl_certificate": "",
+    "ssl_key": "",
+    "ssl_chain": "",
+    "action_type": "block",
+    "sensitivity_level": "medium",
+    "WafTemplate": null,
+    "created_at": "2025-10-22T20:32:33.863Z",
+    "updated_at": "2025-10-22T20:32:33.863Z",
+    "slug": "p2stech",
+    "dns_challenge_key": "_acme-challenge.p2s.tech",
+    "dns_challenge_value": "qr3RoYbPPi1ogh6_edTKaybZnCmh2iV89GLErWegydM",
+    "dns_challenge_created_at": "2025-10-22T20:32:34.038Z"
+  }
+},
+{
+  "model": "site_management.logs",
+  "pk": 3,
+  "fields": {
+    "site": 1,
+    "timestamp": "2025-10-23T00:55:54.761Z",
+    "ip_address": "197.43.188.212",
+    "request_method": "GET",
+    "request_url": "http://p2s.tech/?id=1'%20OR%20'1'='1",
+    "action_taken": "blocked",
+    "details": "SQL Injection - Basic: Query parameter 'id' matched"
+  }
+},
+{
+  "model": "site_management.logs",
+  "pk": 2,
+  "fields": {
+    "site": 1,
+    "timestamp": "2025-10-23T00:55:54.620Z",
+    "ip_address": "197.43.188.212",
+    "request_method": "POST",
+    "request_url": "http://p2s.tech/api/test",
+    "action_taken": "blocked",
+    "details": "SQL Injection - Basic: Request body matched"
+  }
+},
+{
+  "model": "site_management.logs",
+  "pk": 1,
+  "fields": {
+    "site": 1,
+    "timestamp": "2025-10-22T20:32:33.898Z",
+    "ip_address": "127.0.0.1",
+    "request_method": "SYSTEM",
+    "request_url": "http://p2s.tech/admin",
+    "action_taken": "logged",
+    "details": "Site p2s.tech created successfully | pre_save_seen=True"
+  }
+},
+{
+  "model": "site_management.requestanalytics",
+  "pk": 3,
+  "fields": {
+    "site": 1,
+    "timestamp": "2025-10-23T00:55:54.688Z",
+    "ip_address": "197.43.188.212",
+    "country": "Egypt",
+    "country_code": "EG",
+    "city": "Al Mahallah Al Kubra",
+    "region": "Western",
+    "latitude": "30.978129",
+    "longitude": "31.162448",
+    "request_method": "GET",
+    "request_url": "http://p2s.tech/?id=1'%20OR%20'1'='1",
+    "request_path": "/",
+    "user_agent": "Mozilla/5.0 (Test Bot)",
+    "referer": "",
+    "status_code": 403,
+    "response_time": 9.067535400390625,
+    "action_taken": "blocked",
+    "threat_level": "high",
+    "threat_type": "SQL Injection",
+    "is_blacklisted": false
+  }
+},
+{
+  "model": "site_management.requestanalytics",
+  "pk": 2,
+  "fields": {
+    "site": 1,
+    "timestamp": "2025-10-23T00:55:54.555Z",
+    "ip_address": "197.43.188.212",
+    "country": "Egypt",
+    "country_code": "EG",
+    "city": "Al Mahallah Al Kubra",
+    "region": "Western",
+    "latitude": "30.978129",
+    "longitude": "31.162448",
+    "request_method": "POST",
+    "request_url": "http://p2s.tech/api/test",
+    "request_path": "/api/test",
+    "user_agent": "Mozilla/5.0 (Test Bot)",
+    "referer": "",
+    "status_code": 403,
+    "response_time": 31.760215759277344,
+    "action_taken": "blocked",
+    "threat_level": "high",
+    "threat_type": "SQL Injection",
+    "is_blacklisted": false
+  }
+},
+{
+  "model": "site_management.requestanalytics",
+  "pk": 1,
+  "fields": {
+    "site": 1,
+    "timestamp": "2025-10-23T00:55:54.386Z",
+    "ip_address": "197.43.188.212",
+    "country": "Egypt",
+    "country_code": "EG",
+    "city": "Al Mahallah Al Kubra",
+    "region": "Western",
+    "latitude": "30.978129",
+    "longitude": "31.162448",
+    "request_method": "GET",
+    "request_url": "http://p2s.tech/",
+    "request_path": "/",
+    "user_agent": "Mozilla/5.0 (Test Bot)",
+    "referer": "",
+    "status_code": 200,
+    "response_time": 12.05754280090332,
+    "action_taken": "allowed",
+    "threat_level": "none",
+    "threat_type": null,
+    "is_blacklisted": false
+  }
+},
+{
+  "model": "site_management.geographicstats",
+  "pk": 1,
+  "fields": {
+    "site": 1,
+    "date": "2025-10-23",
+    "country": "Egypt",
+    "country_code": "EG",
+    "total_requests": 3,
+    "blocked_requests": 2,
+    "allowed_requests": 1,
+    "unique_ips": 0,
+    "avg_response_time": 17.62843132019043,
+    "high_threat_count": 2,
+    "medium_threat_count": 0,
+    "low_threat_count": 0
+  }
+}
+]

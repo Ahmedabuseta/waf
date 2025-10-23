@@ -458,26 +458,48 @@ def dns_challenge_page(request, site_slug):
                 if verification_result.get('exists') and verification_result.get('matched'):
                     messages.success(request, 'DNS verification successful! Generating wildcard certificate...')
 
-                    # Generate wildcard certificate using enhanced caddy manager
+                    # Generate wildcard certificate using new web-based flow
                     from site_management.utils.certificate_manager import CertificateManager
-                    caddy_manager = CertificateManager()
+                    cert_manager = CertificateManager()
 
                     # Get email from site or use default
                     email = getattr(site, 'ssl_email', 'ahmed.a.abuseta@gmail.com')
 
-                    cert_result = caddy_manager.generate_wildcard_certificate_acme(
+                    # Use the new web-based certificate generation method
+                    cert_result = cert_manager.verify_dns_challenge_and_generate_cert(
                         domain=site.host,
                         email=email,
+                        challenge_value=verify_value,
                         staging=False  # Set to True for testing
                     )
 
                     if cert_result.get('success'):
-                        messages.success(request, f'Wildcard certificate generated successfully! Certificate: {cert_result.get("cert_path")}')
-                        # Update site status to indicate SSL is now active
-                        site.ssl_status = 'active'
+                        # Update site with certificate paths
+                        site.ssl_cert_path = cert_result.get('cert_path')
+                        site.ssl_key_path = cert_result.get('key_path')
+
+                        # Clear DNS challenge after successful generation
+                        site.clear_dns_challenge()
                         site.save()
+
+                        success_msg = f'✅ Wildcard certificate generated successfully for {site.host} and *.{site.host}!'
+                        if cert_result.get('caddy_updated'):
+                            success_msg += ' Caddyfile has been updated and reloaded.'
+                        else:
+                            success_msg += ' Warning: Caddyfile may need manual update.'
+
+                        messages.success(request, success_msg)
+
+                        # Redirect to site detail to show updated configuration
+                        return redirect('site_detail', slug=site_slug)
                     else:
                         messages.error(request, f'Failed to generate certificate: {cert_result.get("error")}')
+                else:
+                    # DNS verification failed
+                    if verification_result.get('exists'):
+                        messages.error(request, f'DNS record found but value does not match. Expected: {verify_value}')
+                    else:
+                        messages.error(request, 'DNS TXT record not found. Please ensure you have added the record to your DNS provider and wait for propagation.')
             else:
                 messages.warning(request, 'No challenge value provided for verification')
 

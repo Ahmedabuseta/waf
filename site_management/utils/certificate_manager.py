@@ -11,9 +11,10 @@ import shutil
 import tarfile
 import subprocess
 import re
+import json
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Dict, Tuple
 
 # Add the parent directory to the path to import our modules
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "site_management"))
@@ -22,6 +23,7 @@ try:
     from site_management.caddy_logger import caddy_logger
     from .certificate_checker import CertificateChecker
     from .certificate_operations import OpenSSLNotAvailableError
+    from .acme_dns_manager import ACMEDNSManager
 except ImportError as e:
     print(f"❌ Import error: {e}")
     print("Please ensure all dependencies are installed")
@@ -31,7 +33,7 @@ except ImportError as e:
 class CertificateManager:
     """Comprehensive certificate management for Caddy WAF system using modular utilities"""
 
-    def __init__(self, certs_dir: str = "/etc/caddy/certs"):
+    def __init__(self, certs_dir: str = "/etc/caddy/certs", caddy_base_path: str = "/etc/caddy"):
         try:
             self.checker = CertificateChecker()
         except OpenSSLNotAvailableError:
@@ -41,6 +43,8 @@ class CertificateManager:
         self.certs_dir = Path(certs_dir)
         self.certs_dir.mkdir(parents=True, exist_ok=True)
         self.logger = caddy_logger
+        self.caddy_base_path = Path(caddy_base_path)
+        self.acme_manager = ACMEDNSManager()
 
     def check_certificate(self, cert_path: str, detailed: bool = False) -> bool:
         """Check certificate details and validity using modular utilities"""
@@ -379,8 +383,20 @@ class CertificateManager:
 
                 # Verify the installed certificate using modular checker
                 cert_path = domain_dir / "cert.pem"
+                key_path = domain_dir / "key.pem"
+
                 if self._verify_wildcard_certificate(str(cert_path), domain):
                     print("✅ Certificate verification passed")
+
+                    # Update Caddyfile with new certificate
+                    caddy_update_result = self._update_caddyfile_with_certificate(
+                        domain, str(cert_path), str(key_path)
+                    )
+
+                    if caddy_update_result.get("success"):
+                        print("✅ Caddyfile updated successfully")
+                    else:
+                        print(f"⚠️  Warning: Failed to update Caddyfile: {caddy_update_result.get('error')}")
 
                     # Log the operation
                     if self.logger:
@@ -392,6 +408,8 @@ class CertificateManager:
                     return {
                         "success": True,
                         "cert_path": str(cert_path),
+                        "key_path": str(key_path),
+                        "caddy_updated": caddy_update_result.get("success", False)
                     }
                 else:
                     return {
@@ -409,6 +427,179 @@ class CertificateManager:
         except Exception as e:
             return {
                 "error": f"Error generating wildcard certificate: {e}"
+            }
+
+    def generate_dns_challenge_for_web(self, domain: str, support_subdomains: bool = True) -> Dict:
+        """
+        Generate DNS challenge for web-based manual verification flow
+        Returns challenge data that can be displayed to user
+
+        This is step 1 of the web flow:
+        1. Generate challenge and show to user
+        2. User adds TXT record to their DNS
+        3. User clicks verify button
+        4. System verifies DNS record exists
+        5. System generates certificate using acme.sh
+        6. System updates Caddyfile
+        """
+        try:
+            challenge_data = self.acme_manager.generate_challenge_value(domain)
+
+            # Generate instructions for the user
+            instructions = self.acme_manager.generate_challenge_instructions(
+                domain=domain,
+                support_subdomains=support_subdomains,
+                challenge_value=challenge_data['value']
+            )
+
+            return {
+                "success": True,
+                "challenge_key": challenge_data['key'],
+                "challenge_value": challenge_data['value'],
+                "instructions": instructions,
+                "domain": domain,
+                "support_subdomains": support_subdomains
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Failed to generate DNS challenge: {e}"
+            }
+
+    def verify_dns_challenge_and_generate_cert(self, domain: str, email: str,
+                                               challenge_value: str,
+                                               staging: bool = False) -> Dict:
+        """
+        Verify DNS challenge and generate certificate if verification passes
+
+        This is step 2 of the web flow (after user clicks verify):
+        1. Verify DNS TXT record exists with correct value
+        2. If verified, generate certificate with acme.sh
+        3. Install certificate to domain directory
+        4. Update Caddyfile with new certificate
+        5. Return results
+        """
+        try:
+            print(f"🔍 Verifying DNS challenge for {domain}...")
+
+            # Step 1: Verify DNS record
+            verification_result = self.acme_manager.verify_dns_challenge_record(
+                domain=domain,
+                expected_value=challenge_value
+            )
+
+            if not verification_result.get('exists'):
+                return {
+                    "success": False,
+                    "error": "DNS TXT record not found. Please ensure you've added the record to your DNS provider.",
+                    "verification_result": verification_result
+                }
+
+            if not verification_result.get('matched'):
+                return {
+                    "success": False,
+                    "error": f"DNS TXT record exists but value doesn't match. Expected: {challenge_value}, Found: {verification_result.get('found_value')}",
+                    "verification_result": verification_result
+                }
+
+            print("✅ DNS challenge verified successfully!")
+
+            # Step 2: Generate certificate using acme.sh
+            print(f"🔐 Generating wildcard certificate for {domain}...")
+
+            wildcard_domain = f"*.{domain}"
+            domain_dir = self.certs_dir / domain
+            domain_dir.mkdir(parents=True, exist_ok=True)
+
+            # Build and execute acme.sh command
+            acme_sh_path = str(Path.home() / '.acme.sh' / 'acme.sh')
+
+            acme_cmd = [
+                acme_sh_path, '--issue',
+                '--dns', 'dns_manual',
+                '-d', domain,
+                '-d', wildcard_domain,
+                '--email', email,
+                '--keylength', '2048',
+                '--server', 'letsencrypt',
+                '--yes-I-know-dns-manual-mode-enough-go-ahead-please'
+            ]
+
+            if staging:
+                acme_cmd.append('--staging')
+
+            print("🔄 Running acme.sh to generate certificate...")
+            result = subprocess.run(
+                acme_cmd,
+                capture_output=True,
+                text=True,
+                timeout=300
+            )
+
+            if result.returncode != 0:
+                # Check if certificate already exists
+                if "Domains not changed" in result.stdout or "cert already exists" in result.stdout.lower():
+                    print("ℹ️  Certificate already exists, using existing certificate")
+                else:
+                    return {
+                        "success": False,
+                        "error": f"acme.sh failed: {result.stderr or result.stdout}",
+                        "verification_result": verification_result
+                    }
+
+            # Step 3: Copy certificates to domain directory
+            if not self._copy_acme_certificates_to_domain_dir(domain, domain_dir):
+                return {
+                    "success": False,
+                    "error": "Failed to copy certificates from acme.sh directory",
+                    "verification_result": verification_result
+                }
+
+            cert_path = domain_dir / "cert.pem"
+            key_path = domain_dir / "key.pem"
+
+            # Step 4: Verify installed certificate
+            if not self._verify_wildcard_certificate(str(cert_path), domain):
+                return {
+                    "success": False,
+                    "error": "Certificate verification failed after installation",
+                    "verification_result": verification_result
+                }
+
+            print("✅ Certificate generated and verified successfully!")
+
+            # Step 5: Update Caddyfile
+            print("📝 Updating Caddyfile with new certificate...")
+            caddy_result = self._update_caddyfile_with_certificate(
+                domain, str(cert_path), str(key_path)
+            )
+
+            # Log the operation
+            if self.logger:
+                cert_info = self.checker.check_certificate_domains(str(cert_path))
+                self.logger.log_certificate_operation(
+                    domain, "generate_wildcard_web", cert_info, True
+                )
+
+            return {
+                "success": True,
+                "cert_path": str(cert_path),
+                "key_path": str(key_path),
+                "verification_result": verification_result,
+                "caddy_updated": caddy_result.get("success", False),
+                "caddy_message": caddy_result.get("message", ""),
+                "message": f"Wildcard certificate successfully generated for {domain} and *.{domain}"
+            }
+
+        except subprocess.TimeoutExpired:
+            return {
+                "success": False,
+                "error": "Certificate generation timed out. Please try again."
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Error during certificate generation: {str(e)}"
             }
 
     def backup_certificates(self, backup_path: str) -> bool:
@@ -549,6 +740,167 @@ class CertificateManager:
         except Exception as e:
             print(f"   ❌ Certificate verification error: {e}")
             return False
+
+    def _update_caddyfile_with_certificate(self, domain: str, cert_path: str, key_path: str) -> Dict:
+        """
+        Update Caddyfile template or site-specific config with certificate paths
+        This integrates the certificate into Caddy's configuration
+        """
+        try:
+            # Path to site-specific Caddyfile
+            sites_dir = self.caddy_base_path / "sites"
+            sites_dir.mkdir(parents=True, exist_ok=True)
+            site_caddyfile = sites_dir / f"{domain}.caddy"
+
+            # Generate Caddyfile configuration
+            config_content = self._generate_caddyfile_config(domain, cert_path, key_path)
+
+            # Write configuration to file
+            site_caddyfile.write_text(config_content)
+
+            # Ensure main Caddyfile imports site configs
+            self._ensure_site_import_in_main_caddyfile(sites_dir)
+
+            # Reload Caddy to apply changes
+            reload_result = self._reload_caddy_config()
+
+            if reload_result.get("success"):
+                print(f"✅ Caddyfile updated and Caddy reloaded for {domain}")
+                return {
+                    "success": True,
+                    "message": f"Certificate configured for {domain}",
+                    "config_path": str(site_caddyfile)
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": f"Caddyfile created but reload failed: {reload_result.get('error')}",
+                    "config_path": str(site_caddyfile)
+                }
+
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Failed to update Caddyfile: {e}"
+            }
+
+    def _generate_caddyfile_config(self, domain: str, cert_path: str, key_path: str) -> str:
+        """Generate Caddyfile configuration for a domain with custom certificates"""
+        config = f"""# Caddy configuration for {domain}
+# Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+{domain}, *.{domain} {{
+    tls {cert_path} {key_path}
+
+    # Reverse proxy to backend (customize as needed)
+    reverse_proxy localhost:8000
+
+    # Logging
+    log {{
+        output file /var/log/caddy/{domain}.log
+        format json
+    }}
+
+    # Security headers
+    header {{
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        X-XSS-Protection "1; mode=block"
+    }}
+}}
+"""
+        return config
+
+    def _ensure_site_import_in_main_caddyfile(self, sites_dir: Path) -> bool:
+        """Ensure main Caddyfile imports all site configurations"""
+        try:
+            main_caddyfile = self.caddy_base_path / "Caddyfile"
+
+            # Import directive to add
+            import_directive = f"import {sites_dir}/*.caddy"
+
+            # Read existing Caddyfile or create new one
+            if main_caddyfile.exists():
+                content = main_caddyfile.read_text()
+
+                # Check if import already exists
+                if import_directive in content:
+                    return True
+
+                # Add import at the beginning
+                content = f"{import_directive}\n\n{content}"
+            else:
+                # Create new Caddyfile with import
+                content = f"""# Main Caddyfile
+# Auto-generated by Certificate Manager
+
+{import_directive}
+
+# Global options
+{{
+    admin localhost:2019
+    auto_https off
+}}
+"""
+
+            main_caddyfile.write_text(content)
+            print(f"✅ Updated main Caddyfile to import site configs")
+            return True
+
+        except Exception as e:
+            print(f"⚠️  Failed to update main Caddyfile: {e}")
+            return False
+
+    def _reload_caddy_config(self) -> Dict:
+        """Reload Caddy configuration using caddy reload command or API"""
+        try:
+            # Try using caddy reload command
+            result = subprocess.run(
+                ['caddy', 'reload', '--config', str(self.caddy_base_path / 'Caddyfile')],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+
+            if result.returncode == 0:
+                return {
+                    "success": True,
+                    "message": "Caddy reloaded successfully"
+                }
+            else:
+                # Try using Caddy API as fallback
+                try:
+                    import requests
+                    response = requests.post('http://localhost:2019/load', timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            "success": True,
+                            "message": "Caddy reloaded via API"
+                        }
+                except:
+                    pass
+
+                return {
+                    "success": False,
+                    "error": f"Caddy reload failed: {result.stderr or result.stdout}"
+                }
+
+        except subprocess.TimeoutExpired:
+            return {
+                "success": False,
+                "error": "Caddy reload timed out"
+            }
+        except FileNotFoundError:
+            return {
+                "success": False,
+                "error": "Caddy executable not found in PATH"
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Failed to reload Caddy: {e}"
+            }
 
 
 def main():

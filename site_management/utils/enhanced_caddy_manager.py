@@ -306,6 +306,9 @@ class EnhancedCaddyManager:
                     self.logger.log_site_operation(
                         config.host, "add_site_complete", operation_details, True
                     )
+                    self.logger.main_logger.info("##############################")
+                    self.logger.main_logger.info(f"# CADDY ADD SITE COMPLETE: {config.host}")
+                    self.logger.main_logger.info("##############################")
 
                 return result
             else:
@@ -321,6 +324,9 @@ class EnhancedCaddyManager:
                         "Failed to reload Caddy after adding site",
                         {"reload_output": reload_output}
                     )
+                    self.logger.main_logger.error("##############################")
+                    self.logger.main_logger.error(f"# CADDY ADD SITE FAILED: {config.host}")
+                    self.logger.main_logger.error("##############################")
 
                 return result
 
@@ -336,6 +342,10 @@ class EnhancedCaddyManager:
                 self.logger.log_error(
                     config.host, "add_site_failed", str(e), error_details
                 )
+                self.logger.main_logger.error("##############################")
+                self.logger.main_logger.error(f"# CADDY ADD SITE ERROR: {config.host}")
+                self.logger.main_logger.error(f"# ERROR: {str(e)}")
+                self.logger.main_logger.error("##############################")
 
             return {
                 "success": False,
@@ -396,6 +406,9 @@ class EnhancedCaddyManager:
                     self.logger.log_site_operation(
                         domain, "remove_site_complete", operation_details, True
                     )
+                    self.logger.main_logger.info("##############################")
+                    self.logger.main_logger.info(f"# CADDY REMOVE SITE COMPLETE: {domain}")
+                    self.logger.main_logger.info("##############################")
 
                 return {
                     "success": True,
@@ -409,6 +422,9 @@ class EnhancedCaddyManager:
                         "Failed to reload Caddy after removing site",
                         {"reload_output": reload_output}
                     )
+                    self.logger.main_logger.error("##############################")
+                    self.logger.main_logger.error(f"# CADDY REMOVE SITE FAILED: {domain}")
+                    self.logger.main_logger.error("##############################")
 
                 return {
                     "success": False,
@@ -424,6 +440,10 @@ class EnhancedCaddyManager:
                     domain, "remove_site_failed", str(e),
                     {"duration": duration}
                 )
+                self.logger.main_logger.error("##############################")
+                self.logger.main_logger.error(f"# CADDY REMOVE SITE ERROR: {domain}")
+                self.logger.main_logger.error(f"# ERROR: {str(e)}")
+                self.logger.main_logger.error("##############################")
 
             return {
                 "success": False,
@@ -445,6 +465,9 @@ class EnhancedCaddyManager:
             self.logger.log_site_operation(
                 config.host, "update_site_start", {"domain": config.host}
             )
+            self.logger.main_logger.info("##############################")
+            self.logger.main_logger.info(f"# CADDY UPDATE SITE START: {config.host}")
+            self.logger.main_logger.info("##############################")
 
         # For updates, we overwrite the existing configuration
         return self.add_site(config)

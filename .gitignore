@@ -1,0 +1,99 @@
+# Python
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+__pycache__/
+*.pyc
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+*.sqlite3
+*.sqlite3-journal
+/media
+/staticfiles
+/static_root
+local_settings.py
+
+# SSL Certificates
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+ssl/
+
+# Secret Keys & Environment
+.env
+.env.local
+.env.*.local
+*.secret
+secrets.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Caddy
+Caddyfile.backup
+caddy_data/
+caddy_config/
+
+# acme.sh
+.acme.sh/
+
+# Coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+
+# Pytest
+.pytest_cache/
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Logs
+logs/
+*.log.*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
