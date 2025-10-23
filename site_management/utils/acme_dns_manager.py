@@ -27,6 +27,8 @@ class ACMEDNSManager:
         self.resolver = dns.resolver.Resolver()
         self.resolver.timeout = 10
         self.resolver.lifetime = 10
+        # Disable cache to ensure fresh DNS queries
+        self.resolver.cache = None
 
     def generate_challenge_value(self, domain: str) -> Dict[str, str]:
         """
@@ -222,7 +224,7 @@ class ACMEDNSManager:
         challenge_record = f"_acme-challenge.{base_domain}"
 
         try:
-            # Query TXT records
+            # Query TXT records (cache disabled for fresh results)
             answers = self.resolver.resolve(challenge_record, 'TXT')
 
             txt_records = []
@@ -230,6 +232,11 @@ class ACMEDNSManager:
                 # Decode TXT record
                 value = ''.join([s.decode('utf-8') if isinstance(s, bytes) else s for s in rdata.strings])
                 txt_records.append(value)
+
+            # Debug: Log all found TXT records
+            print(f"   DEBUG: DNS query returned {len(txt_records)} TXT record(s) for {challenge_record}")
+            for idx, val in enumerate(txt_records, 1):
+                print(f"   DEBUG:   Record {idx}: {val[:50]}...")
 
             if not txt_records:
                 return {
