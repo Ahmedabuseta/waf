@@ -51,7 +51,12 @@ def get_client_ip(request) -> str:
 
 def geolocate_ip(ip_address: str, use_cache: bool = True) -> Dict[str, Optional[str]]:
     """
-    Get geolocation information for an IP address using ipapi.co
+    Get geolocation information for an IP address with multi-provider fallback
+
+    Tries multiple providers in order:
+    1. ipapi.co (free, no key required)
+    2. ipwhois.app (free, no key required)
+    3. ip-api.com (free, no key required)
 
     Args:
         ip_address: IP address to geolocate
@@ -95,8 +100,58 @@ def geolocate_ip(ip_address: str, use_cache: bool = True) -> Dict[str, Optional[
         if cached_result:
             return cached_result
 
+    # Try multiple providers in order
+    providers = [
+        _geolocate_ipapi_co,
+        _geolocate_ipwhois,
+        _geolocate_ip_api_com
+    ]
+
+    last_error = None
+    for provider in providers:
+        try:
+            result = provider(ip_address)
+
+            # If successful (no error and has valid country), cache and return immediately
+            if result.get('country') and result.get('country') not in [None, 'Unknown', ''] and not result.get('error'):
+                if use_cache:
+                    cache.set(f'geoip_{ip_address}', result, 86400)  # Cache for 24 hours
+                logger.info(f"Successfully geolocated {ip_address} using {provider.__name__}")
+                return result
+
+            # Track the error for logging
+            if result.get('error'):
+                last_error = result.get('error')
+                logger.debug(f"Provider {provider.__name__} failed for {ip_address}: {result.get('error')}")
+
+        except Exception as e:
+            last_error = str(e)
+            logger.warning(f"Provider {provider.__name__} exception for {ip_address}: {str(e)}")
+            continue
+
+    # All providers failed
+    logger.error(f"All geolocation providers failed for {ip_address}. Last error: {last_error}")
+    return {
+        **default_response,
+        'error': f'All providers failed. Last error: {last_error}'
+    }
+
+
+def _geolocate_ipapi_co(ip_address: str) -> Dict[str, Optional[str]]:
+    """
+    Geolocate using ipapi.co (1000 requests/day free)
+    """
+    default_response = {
+        'country': None,
+        'country_code': None,
+        'city': None,
+        'region': None,
+        'latitude': None,
+        'longitude': None,
+        'error': None
+    }
+
     try:
-        # Use ipapi.co free API (no key required, 1000 requests/day)
         response = requests.get(
             f'https://ipapi.co/{ip_address}/json/',
             timeout=5
@@ -107,13 +162,12 @@ def geolocate_ip(ip_address: str, use_cache: bool = True) -> Dict[str, Optional[
 
             # Check for API error
             if 'error' in data and data['error']:
-                logger.warning(f"Geolocation API error for {ip_address}: {data.get('reason', 'Unknown')}")
                 return {
                     **default_response,
                     'error': data.get('reason', 'API error')
                 }
 
-            result = {
+            return {
                 'country': data.get('country_name'),
                 'country_code': data.get('country_code'),
                 'city': data.get('city'),
@@ -122,37 +176,112 @@ def geolocate_ip(ip_address: str, use_cache: bool = True) -> Dict[str, Optional[
                 'longitude': data.get('longitude'),
                 'error': None
             }
-
-            # Cache successful result for 24 hours
-            if use_cache:
-                cache.set(cache_key, result, 86400)
-
-            return result
         else:
-            logger.warning(f"Geolocation API returned status {response.status_code} for {ip_address}")
             return {
                 **default_response,
-                'error': f'API returned status {response.status_code}'
+                'error': f'HTTP {response.status_code}'
             }
 
-    except requests.Timeout:
-        logger.error(f"Geolocation API timeout for {ip_address}")
-        return {
-            **default_response,
-            'error': 'API timeout'
-        }
-    except requests.RequestException as e:
-        logger.error(f"Geolocation API error for {ip_address}: {str(e)}")
-        return {
-            **default_response,
-            'error': str(e)
-        }
     except Exception as e:
-        logger.error(f"Unexpected error geolocating {ip_address}: {str(e)}")
-        return {
-            **default_response,
-            'error': str(e)
-        }
+        return {**default_response, 'error': str(e)}
+
+
+def _geolocate_ipwhois(ip_address: str) -> Dict[str, Optional[str]]:
+    """
+    Geolocate using ipwhois.app (free, no key required, 10k requests/month)
+    """
+    default_response = {
+        'country': None,
+        'country_code': None,
+        'city': None,
+        'region': None,
+        'latitude': None,
+        'longitude': None,
+        'error': None
+    }
+
+    try:
+        response = requests.get(
+            f'https://ipwhois.app/json/{ip_address}',
+            timeout=5
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+
+            # Check for API error
+            if not data.get('success', True):
+                return {
+                    **default_response,
+                    'error': data.get('message', 'API error')
+                }
+
+            return {
+                'country': data.get('country'),
+                'country_code': data.get('country_code'),
+                'city': data.get('city'),
+                'region': data.get('region'),
+                'latitude': float(data.get('latitude')) if data.get('latitude') else None,
+                'longitude': float(data.get('longitude')) if data.get('longitude') else None,
+                'error': None
+            }
+        else:
+            return {
+                **default_response,
+                'error': f'HTTP {response.status_code}'
+            }
+
+    except Exception as e:
+        return {**default_response, 'error': str(e)}
+
+
+def _geolocate_ip_api_com(ip_address: str) -> Dict[str, Optional[str]]:
+    """
+    Geolocate using ip-api.com (free, 45 requests/minute limit)
+    """
+    default_response = {
+        'country': None,
+        'country_code': None,
+        'city': None,
+        'region': None,
+        'latitude': None,
+        'longitude': None,
+        'error': None
+    }
+
+    try:
+        response = requests.get(
+            f'http://ip-api.com/json/{ip_address}',
+            timeout=5
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+
+            # Check for API error
+            if data.get('status') == 'fail':
+                return {
+                    **default_response,
+                    'error': data.get('message', 'API error')
+                }
+
+            return {
+                'country': data.get('country'),
+                'country_code': data.get('countryCode'),
+                'city': data.get('city'),
+                'region': data.get('regionName'),
+                'latitude': data.get('lat'),
+                'longitude': data.get('lon'),
+                'error': None
+            }
+        else:
+            return {
+                **default_response,
+                'error': f'HTTP {response.status_code}'
+            }
+
+    except Exception as e:
+        return {**default_response, 'error': str(e)}
 
 
 def is_private_ip(ip_address: str) -> bool:
@@ -299,17 +428,18 @@ def geolocate_ip_ipinfo(ip_address: str, token: Optional[str] = None) -> Dict[st
         if response.status_code == 200:
             data = response.json()
 
+            # Parse location (lat,lon format)
+            loc = data.get('loc', '').split(',')
+            latitude = float(loc[0]) if len(loc) > 0 and loc[0] else None
+            longitude = float(loc[1]) if len(loc) > 1 and loc[1] else None
+
             result = {
-                'country': str(data.get('country', 'Unknown')),
-                'country_code': str(data.get('country_code', 'XX')).upper(),
-                'city': str(data.get('city', 'Unknown')),
-                'region': str(data.get('region', 'Unknown')),
-                'latitude': float(data.get('latitude')) if data.get('latitude') else None,
-                'longitude': float(data.get('longitude')) if data.get('longitude') else None,
-                'isp': str(data.get('isp', 'Unknown')),
-                'org': str(data.get('org', 'Unknown')),
-                'asn': str(data.get('asn', 'Unknown')),
-                'timezone': str(data.get('timezone', 'Unknown')),
+                'country': data.get('country'),
+                'country_code': data.get('country'),
+                'city': data.get('city'),
+                'region': data.get('region'),
+                'latitude': latitude,
+                'longitude': longitude,
                 'error': None
             }
             return result
