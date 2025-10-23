@@ -356,8 +356,7 @@ site.host }} - WAF Management{% endblock %} {% block content %}
                             clip-rule="evenodd"
                         ></path>
                     </svg>
-                    TXT Record #{{ forloop.counter }} {% if txt_records|length >
-                    1 %}
+                    TXT Record #{{ forloop.counter }} {% if txt_records|length > 1 %}
                     <span class="ml-2 text-xs text-gray-600 dark:text-gray-400">
                         ({{ forloop.counter }} of {{ txt_records|length }})
                     </span>
@@ -435,8 +434,7 @@ site.host }} - WAF Management{% endblock %} {% block content %}
                                 class="text-xs text-green-600 dark:text-green-400 mt-1 ml-1 font-semibold"
                             >
                                 ⚠️ IMPORTANT: Add this EXACT value to your DNS
-                                provider (case-sensitive) {% if
-                                txt_records|length > 1 %}
+                                provider (case-sensitive) {% if  txt_records|length > 1 %}
                                 <br />
                                 <span
                                     class="text-yellow-600 dark:text-yellow-400"
