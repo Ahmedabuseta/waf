@@ -290,9 +290,8 @@ def geolocate_ip_ipinfo(ip_address: str, token: Optional[str] = None) -> Dict[st
         return {**default_response, 'country': 'Local', 'country_code': 'XX', 'city': 'Local'}
 
     try:
-        url = f'https://ipinfo.io/{ip_address}/json'
-        if token:
-            url += f'?token={token}'
+        url = f"https://ipwhois.app/json/{ip_address}"
+
 
         response = requests.get(url, timeout=5)
 
@@ -304,15 +303,20 @@ def geolocate_ip_ipinfo(ip_address: str, token: Optional[str] = None) -> Dict[st
             latitude = float(loc[0]) if len(loc) > 0 and loc[0] else None
             longitude = float(loc[1]) if len(loc) > 1 and loc[1] else None
 
-            return {
-                'country': str(data.get('country_name', 'Unknown')),
+            result = {
+                'country': str(data.get('country', 'Unknown')),
                 'country_code': str(data.get('country_code', 'XX')).upper(),
                 'city': str(data.get('city', 'Unknown')),
                 'region': str(data.get('region', 'Unknown')),
-                'latitude': float(data.get('latitude')) if data.get('latitude') is not None else None,
-                'longitude': float(data.get('longitude')) if data.get('longitude') is not None else None,
+                'latitude': float(data.get('latitude')) if data.get('latitude') else None,
+                'longitude': float(data.get('longitude')) if data.get('longitude') else None,
+                'isp': str(data.get('isp', 'Unknown')),
+                'org': str(data.get('org', 'Unknown')),
+                'asn': str(data.get('asn', 'Unknown')),
+                'timezone': str(data.get('timezone', 'Unknown')),
                 'error': None
             }
+            return result
         else:
             return {**default_response, 'error': f'API returned status {response.status_code}'}
 
