@@ -305,12 +305,12 @@ def geolocate_ip_ipinfo(ip_address: str, token: Optional[str] = None) -> Dict[st
             longitude = float(loc[1]) if len(loc) > 1 and loc[1] else None
 
             return {
-                'country': data.get('country'),
-                'country_code': data.get('country'),
-                'city': data.get('city'),
-                'region': data.get('region'),
-                'latitude': latitude,
-                'longitude': longitude,
+                'country': str(data.get('country_name', 'Unknown')),
+                'country_code': str(data.get('country_code', 'XX')).upper(),
+                'city': str(data.get('city', 'Unknown')),
+                'region': str(data.get('region', 'Unknown')),
+                'latitude': float(data.get('latitude')) if data.get('latitude') is not None else None,
+                'longitude': float(data.get('longitude')) if data.get('longitude') is not None else None,
                 'error': None
             }
         else:
