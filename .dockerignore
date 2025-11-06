@@ -1,0 +1,34 @@
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+
+# Venv
+env/
+.venv/
+venv/
+
+# Node
+node_modules/
+
+# VCS
+.git
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# Compiled/static
+staticfiles/
+media/
+
+# Docker artifacts
+wheels/
+
+# OS
+.DS_Store
+Thumbs.db
+

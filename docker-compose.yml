@@ -1,0 +1,123 @@
+version: "3.9"
+
+name: base-waf
+
+networks:
+  waf_net:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:
+  app_static:
+  app_media:
+
+services:
+  app:
+    build: .
+    container_name: waf_app
+    restart: unless-stopped
+    env_file:
+      - ./env/.env
+    environment:
+      - DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE:-waf_app.settings}
+      - GUNICORN_WORKERS=${GUNICORN_WORKERS:-3}
+      - GUNICORN_BIND=0.0.0.0:8000
+    volumes:
+      - app_static:/app/staticfiles
+      - app_media:/app/media
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python manage.py check --deploy || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - waf_net
+
+  caddy:
+    image: caddy:2
+    container_name: waf_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "2019:2019" # admin API
+    environment:
+      - ACME_AGREE=true
+      - CADDY_ADMIN=0.0.0.0:2019
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - app_static:/srv/static:ro
+      - app_media:/srv/media:ro
+      - ./logs/caddy-manager:/var/log/caddy
+      - ./caddy/sites:/etc/caddy/sites
+    depends_on:
+      - app
+    networks:
+      - waf_net
+
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: waf_web
+    restart: unless-stopped
+    environment:
+      - DJANGO_SETTINGS_MODULE=waf_app.settings
+      - DEBUG=False
+      - SECRET_KEY=${SECRET_KEY:-change-this-to-a-secure-key}
+      - DATABASE_URL=sqlite:///app/db/db.sqlite3
+      - ALLOWED_HOSTS=localhost,127.0.0.1,web
+      - CADDY_API_URL=http://caddy:2019
+      - CADDY_BASE_PATH=/etc/caddy
+      - CADDY_LOG_DIR=/app/logs/caddy-manager
+    volumes:
+      - ./db:/app/db
+      - ./logs:/app/logs
+      - ./media:/app/media
+      - staticfiles:/app/staticfiles
+    depends_on:
+      - caddy
+    networks:
+      - waf_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  caddy:
+    image: caddy:2.8-alpine
+    container_name: waf_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "2019:2019"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy/sites:/etc/caddy/sites:ro
+      - ./caddy/certs:/etc/caddy/certs
+      - ./caddy/data:/data
+      - ./caddy/config:/config
+      - ./logs/caddy:/var/log/caddy
+    networks:
+      - waf_network
+    healthcheck:
+      test: ["CMD", "caddy", "version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  staticfiles:
+
+networks:
+  waf_network:
+    driver: bridge

@@ -29,6 +29,8 @@ class ACMEDNSManager:
         self.resolver.lifetime = 10
         # Disable cache to ensure fresh DNS queries
         self.resolver.cache = None
+        # Use Google DNS (8.8.8.8) to avoid ISP DNS cache issues
+        self.resolver.nameservers = ['8.8.8.8', '8.8.4.4', '1.1.1.1']
 
     def generate_challenge_value(self, domain: str) -> Dict[str, str]:
         """
